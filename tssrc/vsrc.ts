@@ -1,6 +1,7 @@
 export default
 `
 attribute vec3 a_coord; 
+attribute vec3 a_normal;
 attribute vec4 a_color;
 
 uniform vec3 u_position;
@@ -58,15 +59,19 @@ mat4 rotation_about_z (float zRad) {
     0.0, 0.0, 0.0, 1.0);
 }
 
+mat4 model_mat (vec3 pos, vec3 scale, vec3 rot) {
+  return translate_from(pos) *
+         scale_from(scale) *
+         rotation_about_x(rot.x) *
+         rotation_about_z(rot.z) *
+         rotation_about_y(rot.y);
+}
+
 void main () { 
-  mat4 trans = translate_from(u_position);
-  mat4 scale = scale_from(u_scale);
-  mat4 rot_x = rotation_about_x(u_rotation[0]);
-  mat4 rot_y = rotation_about_y(u_rotation[1]);
-  mat4 rot_z = rotation_about_z(u_rotation[2]);
+  mat4 m = model_mat(u_position, u_scale, u_rotation);
   vec4 pos = vec4(a_coord, 1.0);
 
   color = a_color;
-  gl_Position = trans * scale * rot_y * rot_z * rot_x * pos; 
+  gl_Position = m * pos; 
 }
 `
