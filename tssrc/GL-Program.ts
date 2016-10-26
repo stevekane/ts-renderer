@@ -3,6 +3,7 @@ import { Success, Failure, Either } from './Either'
 export type GL = WebGLRenderingContext
 export type Shader = Either<ShaderError, WebGLShader>
 export type Program = Either<ProgramError, WebGLProgram>
+
 export interface ShaderError { 
   src: string 
   log: string
@@ -25,14 +26,20 @@ function compileShader (gl: GL, kind: number, src: string): Shader {
 }
 
 function linkProgram (gl: GL, vertex: Shader, fragment: Shader): Program {
-  const p = gl.createProgram()
+  const program = gl.createProgram()
 
-  if ( vertex.success )   gl.attachShader(p, vertex.value)
-  if ( fragment.success ) gl.attachShader(p, fragment.value)
-  gl.linkProgram(p)
-  return p && gl.getProgramParameter(p, gl.LINK_STATUS) 
-    ? new Success(p) 
-    : new Failure({ fragment, vertex, log: gl.getProgramInfoLog(p) || '' })
+  if ( vertex.success )   gl.attachShader(program, vertex.value)
+  if ( fragment.success ) gl.attachShader(program, fragment.value)
+
+  gl.linkProgram(program)
+
+  const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS)
+  const numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES)
+  const log = gl.getProgramInfoLog(program) || ''
+
+  return program && gl.getProgramParameter(program, gl.LINK_STATUS) 
+    ? new Success(program) 
+    : new Failure({ fragment, vertex, log })
 }
 
 export function fromSource (gl: GL, vsrc: string, fsrc: string): Program {

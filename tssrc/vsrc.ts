@@ -1,9 +1,11 @@
 export default
 `
+precision mediump float;
+
 attribute vec3 a_coord; 
-attribute vec3 a_normal;
 attribute vec4 a_color;
 
+uniform float u_time;
 uniform vec3 u_position;
 uniform vec3 u_scale;
 uniform vec3 u_rotation;
