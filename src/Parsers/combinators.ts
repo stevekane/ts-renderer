@@ -1,11 +1,24 @@
-import { Parser, flatMap, unit, IResult, IErr } from './Parser'
+import { Parser, Outcome, flatMap, unit, failed, Result, Err } from './Parser'
 
 export function or<A> (p1: Parser<A>, p2: Parser<A>): Parser<A> {
-  return function (s: string): IResult<A> | IErr {
+  return function (s: string): Outcome<A> {
     const left = p1(s)
 
     return left.success ? left : p2(s)
   }
+}
+
+export function anyOf ([ head, ...rest ]: Parser<string>[]): Parser<string> {
+  if ( head == null ) return failed('None matched')
+  else                return or(head, anyOf(rest))
+
+}
+
+export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {
+  if ( head == null ) return unit('')
+  else                return flatMap(head,          out =>
+                             flatMap(concat(rest), out2 =>
+                             unit(out + out2)))
 }
 
 export function many<A> (p: Parser<A>): Parser<A[]> {

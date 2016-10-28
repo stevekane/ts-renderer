@@ -1,5 +1,6 @@
 import { isAlpha, isNumber, is } from './predicates'
-import { Outcome, Result, Err, Parser } from './Parser'
+import { Outcome, Result, Err, Parser, flatMap, fmap, unit } from './Parser'
+import { or, concat } from './combinators'
 
 export function satisfy (f: (s: string) => boolean): Parser<string> {
   return function (str: string): Outcome<string> { 
@@ -47,6 +48,19 @@ export function atleastN (n: number, f: (s: string) => boolean): Parser<string> 
   }
 }
 
+export function many<A> (p: Parser<A>): Parser<A[]> {
+  return or(many1(p), unit([]))
+}
+
+export function many1<A> (p: Parser<A>): Parser<A[]> {
+  return flatMap(p,        x =>
+         flatMap(many(p), xs =>
+         unit([ x, ...xs ])))
+}
+
+const dash = satisfy(is('-'))
+const optionalDash = or(dash, unit(''))
+
 export const alpha = satisfy(isAlpha)
 export const num = satisfy(isNumber)
 export const alphanum = satisfy(n => isNumber(n) || isAlpha(n))
@@ -55,3 +69,4 @@ export const nums = consume(isNumber)
 export const alphanums = consume(n => isNumber(n) || isAlpha(n))
 export const space = satisfy(is(' '))
 export const spaces = consume(is(' '))
+export const integer = concat([ optionalDash, atleastN(1, isNumber) ])

@@ -27,6 +27,10 @@ export function unit<A> (a: A): Parser<A> {
   return (s: string) => new Result(a, s)
 }
 
+export function failed (msg: string): Parser<string> {
+  return (s: string) => new Err(msg)
+}
+
 export function fmap<A, B> (f: (a: A) => B, pa: Parser<A>): Parser<B> {
   return flatMap(pa, a => unit(f(a)))
 }

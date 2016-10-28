@@ -1,10 +1,12 @@
 import * as test from 'tape'
+import { flatMap } from '../src/Parsers/Parser'
 import { 
-  many, manyStr, or, consumeThen, between, around, until
+  or, between, around, until
 } from '../src/Parsers/combinators'
 import { 
-  eof, size, satisfy, match, consume, atleastN, 
-  alpha, alphas, num, nums, alphanum, alphanums, space, spaces
+  eof, size, satisfy, match, consume, atleastN, many,
+  alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
+  integer
 } from '../src/Parsers/parsers'
 import {
   is
@@ -78,5 +80,20 @@ test('space', t => {
 
   t.same(spaces('   abcd'), { success: true, rest: 'abcd', val: '   ' })
   t.same(spaces('  '), { success: true, rest: '', val: '  ' })
+  t.end()
+})
+
+test('integer', t => {
+  t.same(integer('1a'), { success: true, rest: 'a', val: '1' })
+  t.same(integer('-1abd'), { success: true, rest: 'abd', val: '-1' })
+  t.end()
+})
+
+test('many', t => {
+  t.same(many(num)('123'), { success: true, rest: '', val: [ '1', '2', '3' ] })
+  t.same(many(alpha)('abc'), { success: true, rest: '', val: [ 'a', 'b', 'c' ] })
+  t.same(many(space)('   '), { success: true, rest: '', val: [ ' ', ' ', ' ' ] })
+  t.same(many(alpha)('abc123'), { success: true, rest: '123', val: [ 'a', 'b', 'c' ] })
+  t.same(many(integer)('1'), { success: true, rest: '', val: [ '1' ] })
   t.end()
 })
