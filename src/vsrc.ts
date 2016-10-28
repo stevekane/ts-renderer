@@ -3,14 +3,11 @@ export default
 precision mediump float;
 
 attribute vec3 a_coord; 
-attribute vec4 a_color;
 
 uniform float u_time;
 uniform vec3 u_position;
 uniform vec3 u_scale;
 uniform vec3 u_rotation;
-
-varying vec4 color;
 
 mat4 translate_from (vec3 v) {
   return mat4(
@@ -73,7 +70,6 @@ void main () {
   mat4 m = model_mat(u_position, u_scale, u_rotation);
   vec4 pos = vec4(a_coord, 1.0);
 
-  color = a_color;
   gl_Position = m * pos; 
 }
 `

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node test",
-    "watch": "watchify -p tsify -o public/ts-main.js tssrc/main.ts & http-server -p 8080"
+    "watch": "watchify -p tsify -o public/ts-main.js src/main.ts & http-server -p 8080"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/stevekane/spinning-cube#readme",
   "devDependencies": {
+    "tape": "^4.6.2",
     "tsify": "^2.0.2",
     "typescript": "^2.0.3"
   },

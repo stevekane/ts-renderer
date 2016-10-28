@@ -1,7 +1,6 @@
 export interface IGeometry {
   indices: Uint16Array
   vertices: Float32Array
-  colors: Float32Array
   normals: Float32Array
 }
 
@@ -16,10 +15,5 @@ export class Triangle implements IGeometry {
     0, 0, 1,
     0, 0, 1,
     0, 0, 1
-  ])
-  colors = new Float32Array([
-    1.0, 1.0, 0.5, 1.0,
-    1.0, 0.5, 1.0, 1.0,
-    0.5, 1.0, 1.0, 1.0
   ])
 }

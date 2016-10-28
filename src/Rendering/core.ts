@@ -8,7 +8,6 @@ export interface IRenderable {
   buffers: {
     a_coord: WebGLBuffer,
     a_normal: WebGLBuffer,
-    a_color: WebGLBuffer,
     indices: WebGLBuffer
   }
 }

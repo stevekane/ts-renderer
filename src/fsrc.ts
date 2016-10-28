@@ -7,7 +7,7 @@ uniform vec3 u_position;
 uniform vec3 u_scale;
 uniform vec3 u_rotation;
 
-varying vec4 color;
+const vec4 color = vec4(1.0, 0.5, 0.25, 1.0);
 
 void main () { 
   vec4 t_color = vec4(color);
