@@ -4,7 +4,7 @@ import {
 } from '../src/Parsers/combinators'
 import { 
   eof, size, satisfy, match, consume, atleastN, 
-  alpha, alphas, num, nums, alphanum, alphanums
+  alpha, alphas, num, nums, alphanum, alphanums, space, spaces
 } from '../src/Parsers/parsers'
 import {
   is
@@ -69,5 +69,14 @@ test('alphanum', t => {
 
   t.same(alphanums('123abc'), { success: true, rest: '', val: '123abc' })
   t.same(alphanums('a1b4%'), { success: true, rest: '%', val: 'a1b4' })
+  t.end()
+})
+
+test('space', t => {
+  t.same(space(' 1abcd'), { success: true, rest: '1abcd', val: ' ' })
+  t.same(space('%asf 1'), { success: false, message: '% did not satisfy' })
+
+  t.same(spaces('   abcd'), { success: true, rest: 'abcd', val: '   ' })
+  t.same(spaces('  '), { success: true, rest: '', val: '  ' })
   t.end()
 })
