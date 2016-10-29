@@ -2,8 +2,8 @@ import * as test from 'tape'
 import { fmap, flatMap, doThen } from '../src/Parsers/Parser'
 import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
-  eof, size, satisfy, match, exactly, consume, atleastN, many, many1, seperatedBy,
-  or, orDefault, anyOf, between, around, concat,
+  eof, size, satisfy, match, exactly, consume, consume1, atleastN, many, many1,
+  or, orDefault, anyOf, between, around, concat, seperatedBy,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
   dash, dot, slash, backslash,
   integer, real
@@ -98,11 +98,6 @@ test('many', t => {
   t.same(many(space)('   '), { success: true, rest: '', val: [ ' ', ' ', ' ' ] })
   t.same(many(alpha)('abc123'), { success: true, rest: '123', val: [ 'a', 'b', 'c' ] })
   t.same(many(integer)('1'), { success: true, rest: '', val: [ '1' ] })
-  t.end()
-})
-
-test('until', t => {
-  // TODO: test
   t.end()
 })
 

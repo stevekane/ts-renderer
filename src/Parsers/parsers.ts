@@ -39,16 +39,10 @@ export function consume (f: (s: string) => boolean): Parser<string> {
   }
 }
 
-export function atleastN (n: number, f: (s: string) => boolean): Parser<string> {
-  return function (s: string): Outcome<string> {
-    if ( n < 0 )        return new Err('Negative count')
-    if ( s.length < n ) return new Err('Not enough characters')
-
-    for ( var i = 0; i < n; i++ ) {
-      if ( !f(s[i]) ) return new Err(`${ s[i] } did not satisfy`)
-    }
-    return consume(f)(s)
-  }
+export function consume1 (f: (s: string) => boolean): Parser<string> {
+  return flatMap(satisfy(f),           x =>
+         flatMap(consume(f), xs =>
+         unit(x + xs)))
 }
 
 export function many<A> (p: Parser<A>): Parser<A[]> {
@@ -61,8 +55,16 @@ export function many1<A> (p: Parser<A>): Parser<A[]> {
          unit([ x, ...xs ])))
 }
 
-export function until<A, B> (pEnd: Parser<B>, p: Parser<A>): Parser<A[]> {
-  return or(flatMap(pEnd, _ => unit([])), many(p))
+export function atleastN (n: number, f: (s: string) => boolean): Parser<string> {
+  return function (s: string): Outcome<string> {
+    if ( n < 0 )        return new Err('Negative count')
+    if ( s.length < n ) return new Err('Not enough characters')
+
+    for ( var i = 0; i < n; i++ ) {
+      if ( !f(s[i]) ) return new Err(`${ s[i] } did not satisfy`)
+    }
+    return consume(f)(s)
+  }
 }
 
 export function seperatedBy<A, B> (p: Parser<A>, sep: Parser<B>): Parser<A[]> {
