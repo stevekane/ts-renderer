@@ -1,16 +1,13 @@
 import * as test from 'tape'
-import { flatMap } from '../src/Parsers/Parser'
+import { flatMap, doThen } from '../src/Parsers/Parser'
+import { is } from '../src/Parsers/predicates'
 import { 
-  or, between, around, until
-} from '../src/Parsers/combinators'
-import { 
-  eof, size, satisfy, match, consume, atleastN, many,
+  eof, size, satisfy, match, exactly, consume, atleastN, many, many1, seperatedBy, anyOf,
+  or, orDefault, between, around, concat,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
-  integer
+  dash, dot, slash, backslash,
+  integer, real
 } from '../src/Parsers/parsers'
-import {
-  is
-} from '../src/Parsers/predicates'
 
 test('eof', t => {
   t.same(eof(''), { success: true, rest: '', val: null })
@@ -27,8 +24,8 @@ test('size', t => {
 })
 
 test('satisfy', t => {
-  t.same(satisfy(is('b'))('babd'), { success: true, rest: 'abd', val: 'b' })
-  t.same(satisfy(is('b'))('abd'), { success: false, message: 'a did not satisfy' })
+  t.same(exactly('b')('babd'), { success: true, rest: 'abd', val: 'b' })
+  t.same(exactly('b')('abd'), { success: false, message: 'a did not satisfy' })
   t.end()
 })
 
@@ -89,11 +86,35 @@ test('integer', t => {
   t.end()
 })
 
+test('real', t => {
+  t.same(real('1.0'), { success: true, rest: '', val: '1.0' })
+  t.same(real('-123.456'), { success: true, rest: '', val: '-123.456' })
+  t.end()
+})
+
 test('many', t => {
   t.same(many(num)('123'), { success: true, rest: '', val: [ '1', '2', '3' ] })
   t.same(many(alpha)('abc'), { success: true, rest: '', val: [ 'a', 'b', 'c' ] })
   t.same(many(space)('   '), { success: true, rest: '', val: [ ' ', ' ', ' ' ] })
   t.same(many(alpha)('abc123'), { success: true, rest: '123', val: [ 'a', 'b', 'c' ] })
   t.same(many(integer)('1'), { success: true, rest: '', val: [ '1' ] })
+  t.end()
+})
+
+test('between', t => {
+  const pattern = between(match('('), integer, match(')'))
+  const paddedInt = between(spaces, integer, spaces)
+
+  t.same(pattern('(5)'), { success: true, rest: '', val: '5' })
+  t.same(many(paddedInt)('1 2 3'), { success: true, rest: '', val: [ '1', '2', '3' ] })
+  t.end()
+})
+
+test('seperatedBy', t => {
+  const pattern = seperatedBy(real, slash)
+  const simple = seperatedBy(dot, dash)
+
+  t.same(simple('.-.-.'), { success: true, rest: '', val: [ '.', '.', '.' ] })
+  t.same(pattern('1.0/2.0/-3.0'), { success: true, rest: '', val: [ '1.0', '2.0', '-3.0' ] })
   t.end()
 })

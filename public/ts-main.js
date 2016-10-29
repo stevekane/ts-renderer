@@ -1,1 +1,1 @@
-console.error("TypeScript error: typings/globals/tape/index.d.ts(55,60): Error TS2503: Cannot find namespace 'NodeJS'.");
+console.error("TypeScript error: src/Parsers/OBJ.ts(3,72): Error TS2307: Cannot find module './combinators'.");

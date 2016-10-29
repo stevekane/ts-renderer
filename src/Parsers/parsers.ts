@@ -1,6 +1,5 @@
-import { isAlpha, isNumber, is } from './predicates'
-import { Outcome, Result, Err, Parser, flatMap, fmap, unit } from './Parser'
-import { or, concat } from './combinators'
+import { isAlpha, isNumber } from './predicates'
+import { Outcome, Result, Err, Parser, flatMap, doThen, fmap, unit, failed } from './Parser'
 
 export function satisfy (f: (s: string) => boolean): Parser<string> {
   return function (str: string): Outcome<string> { 
@@ -8,6 +7,10 @@ export function satisfy (f: (s: string) => boolean): Parser<string> {
     else if ( f(str.slice(0, 1)) ) return new Result(str.slice(0, 1), str.slice(1))
     else                           return new Err(`${ str[0] } did not satisfy`)
   }
+}
+
+export function exactly (character: string): Parser<string> {
+  return satisfy(n => n === character)
 }
 
 export function match (target: string): Parser<string> {
@@ -58,15 +61,65 @@ export function many1<A> (p: Parser<A>): Parser<A[]> {
          unit([ x, ...xs ])))
 }
 
-const dash = satisfy(is('-'))
-const optionalDash = or(dash, unit(''))
+export function until<A, B> (pEnd: Parser<B>, p: Parser<A>): Parser<A[]> {
+  return or(flatMap(pEnd, _ => unit([])), many(p))
+}
 
+export function seperatedBy<A, B> (p: Parser<A>, sep: Parser<B>): Parser<A[]> {
+  return flatMap(p,                     first =>
+         flatMap(many1(doThen(sep, p)), inner =>
+         unit([ first, ...inner ])))
+}
+
+export function between<A, B, C> (pLeft: Parser<A>, p: Parser<B>, pRight: Parser<C>): Parser<B> {
+  return flatMap(doThen(pLeft, p), out =>
+         flatMap(pRight,           _   => 
+         unit(out)))
+}
+
+export function around<A, B, C> (pLeft: Parser<A>, p: Parser<B>, pRight: Parser<C>): Parser<[ A, C ]> {
+  return flatMap(pLeft,  l => 
+         doThen(p, 
+         flatMap(pRight, r => 
+         unit([ l, r ] as [ A, C ]))))
+}
+
+export function orDefault<A> (p: Parser<A>, dflt: A): Parser<A> {
+  return or(p, unit(dflt))
+}
+
+export function or<A> (p1: Parser<A>, p2: Parser<A>): Parser<A> {
+  return function (s: string): Outcome<A> {
+    const left = p1(s)
+
+    return left.success ? left : p2(s)
+  }
+}
+
+export function anyOf ([ head, ...rest ]: Parser<string>[]): Parser<string> {
+  if ( head == null ) return failed('None matched')
+  else                return or(head, anyOf(rest))
+
+}
+
+export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {
+  if ( head == null ) return unit('')
+  else                return flatMap(head,          out =>
+                             flatMap(concat(rest), out2 =>
+                             unit(out + out2)))
+}
+
+export const dash = exactly('-')
+export const dot = exactly('.')
+export const slash = exactly('/')
+export const backslash = exactly('\\')
 export const alpha = satisfy(isAlpha)
 export const num = satisfy(isNumber)
 export const alphanum = satisfy(n => isNumber(n) || isAlpha(n))
 export const alphas = consume(isAlpha)
 export const nums = consume(isNumber)
 export const alphanums = consume(n => isNumber(n) || isAlpha(n))
-export const space = satisfy(is(' '))
-export const spaces = consume(is(' '))
-export const integer = concat([ optionalDash, atleastN(1, isNumber) ])
+export const space = exactly(' ') 
+export const spaces = consume(n => n === ' ')
+export const integer = concat([ orDefault(dash, ''), atleastN(1, isNumber) ])
+export const real = concat([ integer, dot, atleastN(1, isNumber) ])
