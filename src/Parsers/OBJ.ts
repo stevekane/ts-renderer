@@ -1,37 +1,10 @@
 import { Parser, unit, flatMap, doThen, fmap } from './Parser'
-import { satisfy, match } from './parsers'
-import { many, manyStr, or, consumeThen, between, around, until } from './combinators'
-import { isNumber } from './predicates'
+import { 
+  spaces, real, or, exactly, many, seperatedBy, atleastN, between, around,
+  interspersing
+} from './parsers'
+import { isNumber, isAlpha, is } from './predicates'
 import { IGeometry } from '../Rendering/Geometry'
-
-const cr          = match('\n')
-const dot         = match('.') 
-const ncr         = satisfy(n => n !== '\n')
-const space       = satisfy(n => n === ' ')
-const non_space   = satisfy(n => n !== ' ')
-const spaces      = manyStr(space)
-const non_spaces  = manyStr(non_space)
-const num         = satisfy(isNumber)
-const non_num     = satisfy(n => !isNumber(n))
-
-const left = 
-  flatMap(or(match('-'), unit('')), pref =>
-  flatMap(until(non_num, num),      digits =>
-  unit(pref + digits.join(''))))
-
-// const left = 
-//   flatMap(or(match('-'), unit('')), pref =>
-//   flatMap(manyStr(num),             digits =>
-//   unit(pref + digits)))
-const right = manyStr(num)
-const integer = fmap(l => Number(l), left)
-const real = fmap(([ l, r ]) => Number(l + '.' + r), around(left, dot, right))
-
-console.log(integer('11'))
-console.log(many(integer)('111'))
-// console.log(many(consumeThen(spaces, real))('1.3 -1.05'))
-// console.log(until(match('!'), dot)('....!'))
-// console.log(until(cr, consumeThen(spaces, integer))('1 2 3 4\n'))
 
 /*
   What is a face?  It's a set of connected vertices which are combinations
@@ -69,100 +42,97 @@ console.log(many(integer)('111'))
 type V3 = [ number, number, number ]
 type V4 = [ number, number, number, number ]
 
-interface IVertex   { kind: 'Vertex',   value: V3 }
-interface ITexCoord { kind: 'TexCoord', value: V3 }
-interface INormal   { kind: 'Normal',   value: V3 }
-interface IFace     { kind: 'Face',     value: V4 }
-interface IIgnored  { kind: 'Ignored' }
+export interface IVertex   { kind: 'Vertex',   value: V4 }
+export interface ITexCoord { kind: 'TexCoord', value: V3 }
+export interface INormal   { kind: 'Normal',   value: V3 }
+export interface IFace     { kind: 'Face',     value: V4 }
+export interface IIgnored  { kind: 'Ignored' }
 
-const Vert = (x: number, y: number, z: number): IVertex => ({ 
+export const Vert = (x: number, y: number, z: number, w: number): IVertex => ({ 
   kind: 'Vertex', 
-  value: [ x, y, z ]
+  value: [ x, y, z, w ]
 })
 
-const TexCoord = (x: number, y: number, z: number): ITexCoord => ({ 
+export const TexCoord = (x: number, y: number, z: number): ITexCoord => ({ 
   kind: 'TexCoord', 
   value: [ x, y, z ]
 })
 
-const Face = (x: number, y: number, z: number, w: number): IFace => ({ 
+export const Face = (x: number, y: number, z: number, w: number): IFace => ({ 
   kind: 'Face', 
   value: [ x, y, z, w ] 
 })
 
-const Normal = (x: number, y: number, z: number): INormal => ({ 
+export const Normal = (x: number, y: number, z: number): INormal => ({ 
   kind: 'Normal', 
   value: [ x, y, z ] 
 })
 
-const Ignored = (): IIgnored => ({ kind: 'Ignored' })
+export const Ignored = (): IIgnored => ({ kind: 'Ignored' })
 
-type OBJ 
+export type Line
   = IVertex 
   | ITexCoord 
   | INormal
   | IFace
   | IIgnored
 
-const vertex: Parser<OBJ> =
-  doThen(match('v'),
-  flatMap(consumeThen(spaces, real),                x =>
-  flatMap(consumeThen(spaces, real),                y =>
-  flatMap(consumeThen(spaces, real),                z =>
-  flatMap(consumeThen(spaces, or(real, unit(1.0))), w =>
-  unit(Vert(x, y, z)))))))
+export const vertex: Parser<Line> =
+  doThen(exactly('v'),
+  flatMap(atleastN(3, doThen(spaces, real)), xs =>
+  unit(Vert(Number(xs[0]), Number(xs[1]), Number(xs[2]), xs[3] ? Number(xs[3]) : 1.0))))
 
-const texCoord: Parser<OBJ> =
-  doThen(match('vt'),
-  flatMap(consumeThen(spaces, real),                u =>
-  flatMap(consumeThen(spaces, real),                v =>
-  flatMap(consumeThen(spaces, or(real, unit(1.0))), w =>
-  unit(TexCoord(u, v, w))))))
+// const texCoord: Parser<OBJ> =
+//   doThen(match('vt'),
+//   flatMap(consumeThen(spaces, real),                u =>
+//   flatMap(consumeThen(spaces, real),                v =>
+//   flatMap(consumeThen(spaces, or(real, unit(1.0))), w =>
+//   unit(TexCoord(u, v, w))))))
+// 
+// const normal: Parser<OBJ> =
+//   doThen(match('vn'),
+//   flatMap(consumeThen(spaces, real), x =>
+//   flatMap(consumeThen(spaces, real), y =>
+//   flatMap(consumeThen(spaces, real), z =>
+//   unit(Normal(x, y, z))))))
+// 
+// 
+// const face: Parser<OBJ> = 
+//   doThen(match('f'), 
+//   flatMap(many(match('1')), indices =>
+//   doThen(match('\n'),
+//   //unit(Face(indices[0], indices[1], indices[2], indices[3])))))
+//   unit(Face(1, 2, 3, 4)))))
+// 
+// const ignored: Parser<OBJ> =
+//   doThen(manyStr(ncr), 
+//   doThen(cr,
+//   unit(Ignored())))
 
-const normal: Parser<OBJ> =
-  doThen(match('vn'),
-  flatMap(consumeThen(spaces, real), x =>
-  flatMap(consumeThen(spaces, real), y =>
-  flatMap(consumeThen(spaces, real), z =>
-  unit(Normal(x, y, z))))))
-
-
-const face: Parser<OBJ> = 
-  doThen(match('f'), 
-  flatMap(many(match('1')), indices =>
-  doThen(match('\n'),
-  //unit(Face(indices[0], indices[1], indices[2], indices[3])))))
-  unit(Face(1, 2, 3, 4)))))
-
-const ignored: Parser<OBJ> =
-  doThen(manyStr(ncr), 
-  doThen(cr,
-  unit(Ignored())))
-
-const line: Parser<OBJ> = 
-  doThen(spaces, 
-  or(vertex,
-  or(normal,
-  or(face,
-  or(ignored,
-  texCoord)))))
-
-function linesToGeometry (lines: OBJ[]): IGeometry {
-  const vertices: number[] = []
-  const normals: number[] = []
-  const indices: number[] = []
-
-  for ( const l of lines ) {
-    if      ( l.kind === 'Vertex' ) vertices.push(...l.value)
-    else if ( l.kind === 'Normal' ) normals.push(...l.value)
-    else if ( l.kind === 'Face' )   indices.push(...l.value.map(n => n - 1)) 
-    else {}
-  }
-  return { 
-    indices: new Uint16Array(indices),
-    vertices: new Float32Array(vertices),
-    normals: new Float32Array(normals)
-  }
-}
-
-export const parseOBJ = fmap(linesToGeometry, many(line))
+// const line: Parser<OBJ> = 
+//   doThen(spaces, 
+//   or(vertex,
+//   or(normal,
+//   or(face,
+//   or(ignored,
+//   texCoord)))))
+// 
+// function linesToGeometry (lines: OBJ[]): IGeometry {
+//   const vertices: number[] = []
+//   const normals: number[] = []
+//   const indices: number[] = []
+// 
+//   for ( const l of lines ) {
+//     if      ( l.kind === 'Vertex' ) vertices.push(...l.value)
+//     else if ( l.kind === 'Normal' ) normals.push(...l.value)
+//     else if ( l.kind === 'Face' )   indices.push(...l.value.map(n => n - 1)) 
+//     else {}
+//   }
+//   return { 
+//     indices: new Uint16Array(indices),
+//     vertices: new Float32Array(vertices),
+//     normals: new Float32Array(normals)
+//   }
+// }
+// 
+// export const parseOBJ = fmap(linesToGeometry, many(line))

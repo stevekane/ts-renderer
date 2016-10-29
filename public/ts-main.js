@@ -1,1 +1,1 @@
-console.error("TypeScript error: src/Parsers/OBJ.ts(3,72): Error TS2307: Cannot find module './combinators'.");
+console.error("TypeScript error: src/main.ts(7,10): Error TS2305: Module '\"src/Parsers/OBJ\"' has no exported member 'parseOBJ'.");

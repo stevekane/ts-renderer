@@ -45,17 +45,7 @@ export function consume1 (f: (s: string) => boolean): Parser<string> {
          unit(x + xs)))
 }
 
-export function many<A> (p: Parser<A>): Parser<A[]> {
-  return or(many1(p), unit([]))
-}
-
-export function many1<A> (p: Parser<A>): Parser<A[]> {
-  return flatMap(p,        x =>
-         flatMap(many(p), xs =>
-         unit([ x, ...xs ])))
-}
-
-export function atleastN (n: number, f: (s: string) => boolean): Parser<string> {
+export function consumeAtleastN (n: number, f: (s: string) => boolean): Parser<string> {
   return function (s: string): Outcome<string> {
     if ( n < 0 )        return new Err('Negative count')
     if ( s.length < n ) return new Err('Not enough characters')
@@ -67,10 +57,20 @@ export function atleastN (n: number, f: (s: string) => boolean): Parser<string> 
   }
 }
 
-export function seperatedBy<A, B> (p: Parser<A>, sep: Parser<B>): Parser<A[]> {
-  return flatMap(p,                     first =>
-         flatMap(many1(doThen(sep, p)), inner =>
-         unit([ first, ...inner ])))
+
+export function many<A> (p: Parser<A>): Parser<A[]> {
+  return or(many1(p), unit([]))
+}
+
+export function many1<A> (p: Parser<A>): Parser<A[]> {
+  return flatMap(p,        x =>
+         flatMap(many(p), xs =>
+         unit([ x, ...xs ])))
+}
+
+export function atleastN<A> (n: number, p: Parser<A>): Parser<A[]> {
+  return flatMap(many(p), 
+         xs => xs.length >= n ? unit(xs) : failed('Not enough matches') as Parser<A[]>)
 }
 
 export function between<A, B, C> (pLeft: Parser<A>, p: Parser<B>, pRight: Parser<C>): Parser<B> {
@@ -84,6 +84,18 @@ export function around<A, B, C> (pLeft: Parser<A>, p: Parser<B>, pRight: Parser<
          doThen(p, 
          flatMap(pRight, r => 
          unit([ l, r ] as [ A, C ]))))
+}
+
+export function seperatedBy<A, B> (p: Parser<A>, sep: Parser<B>): Parser<A[]> {
+  return flatMap(p,                     first =>
+         flatMap(many1(doThen(sep, p)), inner =>
+         unit([ first, ...inner ])))
+}
+
+export function interspersing<A, B> (p: Parser<A>, sep: Parser<B>): Parser<A[]> {
+  return flatMap(many1(doThen(sep, p)), xs =>
+         flatMap(sep,                    _ =>
+         unit(xs)))
 }
 
 export function orDefault<A> (p: Parser<A>, dflt: A): Parser<A> {
@@ -122,6 +134,6 @@ export const nums = consume(isNumber)
 export const alphanums = consume(n => isNumber(n) || isAlpha(n))
 export const space = exactly(' ') 
 export const spaces = consume(n => n === ' ')
-export const integer = concat([ orDefault(dash, ''), atleastN(1, isNumber) ])
-export const real = concat([ integer, dot, atleastN(1, isNumber) ])
+export const integer = concat([ orDefault(dash, ''), consumeAtleastN(1, isNumber) ])
+export const real = concat([ integer, dot, consumeAtleastN(1, isNumber) ])
 export const newline = anyOf([ exactly('\n'), exactly('\f'), match('\r\n'), exactly('\r') ])

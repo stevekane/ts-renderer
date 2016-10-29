@@ -2,7 +2,8 @@ import * as test from 'tape'
 import { fmap, flatMap, doThen } from '../src/Parsers/Parser'
 import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
-  eof, size, satisfy, match, exactly, consume, consume1, atleastN, many, many1,
+  eof, size, satisfy, match, exactly, consume, consume1, consumeAtleastN, 
+  many, many1, atleastN,
   or, orDefault, anyOf, between, around, concat, seperatedBy,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
   dash, dot, slash, backslash, newline,
@@ -37,10 +38,10 @@ test('match', t => {
 
 test('consumption', t => {
   t.same(consume(is('a'))('aab'), { success: true, rest: 'b', val: 'aa' })
-  t.same(atleastN(2, is('a'))('aab'), { success: true, rest: 'b', val: 'aa' })
-  t.same(atleastN(3, is('a'))('aab'), { success: false, message: 'b did not satisfy' })
-  t.same(atleastN(3, is('a'))('aa'), { success: false, message: 'Not enough characters' })
-  t.same(atleastN(-3, is('a'))('aab'), { success: false, message: 'Negative count' })
+  t.same(consumeAtleastN(2, is('a'))('aab'), { success: true, rest: 'b', val: 'aa' })
+  t.same(consumeAtleastN(3, is('a'))('aab'), { success: false, message: 'b did not satisfy' })
+  t.same(consumeAtleastN(3, is('a'))('aa'), { success: false, message: 'Not enough characters' })
+  t.same(consumeAtleastN(-3, is('a'))('aab'), { success: false, message: 'Negative count' })
   t.end()
 })
 
@@ -109,6 +110,15 @@ test('many', t => {
   t.end()
 })
 
+test('atleastN', t => {
+  const reals = doThen(spaces, real)
+
+  t.same(atleastN(1, reals)('1.0 1.0'), { success: true, rest: '', val: [ '1.0', '1.0' ] })
+  t.same(atleastN(2, reals)('1.0 1.0'), { success: true, rest: '', val: [ '1.0', '1.0' ] })
+  t.same(atleastN(3, reals)('1.0 1.0'), { success: false, message: 'Not enough matches' })
+  t.end()
+})
+
 test('between', t => {
   const pattern = between(match('('), integer, match(')'))
   const paddedInt = between(spaces, integer, spaces)
@@ -157,7 +167,7 @@ test('anyOf', t => {
 })
 
 test('concat', t => {
-  const fullName = concat([ alphas, atleastN(1, is(' ')), atleastN(1, isAlpha) ])
+  const fullName = concat([ alphas, consumeAtleastN(1, is(' ')), consumeAtleastN(1, isAlpha) ])
 
   t.same(fullName('Steve Kane'), { success: true, rest: '', val: 'Steve Kane' })
   t.same(fullName('Dick-Tracy'), { success: false, message: '- did not satisfy' })
