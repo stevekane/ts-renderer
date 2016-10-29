@@ -79,8 +79,11 @@ export type Line
 
 export const vertex: Parser<Line> =
   doThen(exactly('v'),
-  flatMap(atleastN(3, doThen(spaces, real)), xs =>
-  unit(Vert(Number(xs[0]), Number(xs[1]), Number(xs[2]), xs[3] ? Number(xs[3]) : 1.0))))
+  flatMap(doThen(spaces, real),                  x =>
+  flatMap(doThen(spaces, real),                  y =>
+  flatMap(doThen(spaces, real),                  z =>
+  flatMap(doThen(spaces, or(real, unit('1.0'))), w =>
+  unit(Vert(Number(x), Number(y), Number(z), Number(w))))))))
 
 // const texCoord: Parser<OBJ> =
 //   doThen(match('vt'),
