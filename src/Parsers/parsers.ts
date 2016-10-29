@@ -99,7 +99,6 @@ export function or<A> (p1: Parser<A>, p2: Parser<A>): Parser<A> {
 export function anyOf ([ head, ...rest ]: Parser<string>[]): Parser<string> {
   if ( head == null ) return failed('None matched')
   else                return or(head, anyOf(rest))
-
 }
 
 export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {

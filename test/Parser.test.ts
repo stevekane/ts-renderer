@@ -1,9 +1,9 @@
 import * as test from 'tape'
 import { flatMap, doThen } from '../src/Parsers/Parser'
-import { is } from '../src/Parsers/predicates'
+import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
-  eof, size, satisfy, match, exactly, consume, atleastN, many, many1, seperatedBy, anyOf,
-  or, orDefault, between, around, concat,
+  eof, size, satisfy, match, exactly, consume, atleastN, many, many1, seperatedBy,
+  or, orDefault, anyOf, between, around, concat,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
   dash, dot, slash, backslash,
   integer, real
@@ -101,6 +101,11 @@ test('many', t => {
   t.end()
 })
 
+test('until', t => {
+  // TODO: test
+  t.end()
+})
+
 test('between', t => {
   const pattern = between(match('('), integer, match(')'))
   const paddedInt = between(spaces, integer, spaces)
@@ -110,11 +115,42 @@ test('between', t => {
   t.end()
 })
 
+test('around', t => {
+  // TODO: test
+  t.end()
+})
+
 test('seperatedBy', t => {
   const pattern = seperatedBy(real, slash)
   const simple = seperatedBy(dot, dash)
 
   t.same(simple('.-.-.'), { success: true, rest: '', val: [ '.', '.', '.' ] })
   t.same(pattern('1.0/2.0/-3.0'), { success: true, rest: '', val: [ '1.0', '2.0', '-3.0' ] })
+  t.end()
+})
+
+test('or', t => {
+  t.same(or(slash, dot)('/'), { success: true, rest: '', val: '/' })
+  t.same(or(slash, dot)('.'), { success: true, rest: '', val: '.' })
+  t.same(or(slash, dot)('a'), { success: false, message: 'a did not satisfy' })
+
+  t.same(orDefault(slash, '/')('/'), { success: true, rest: '', val: '/' })
+  t.same(orDefault(slash, '/')(''), { success: true, rest: '', val: '/' })
+  t.end()
+})
+
+test('anyOf', t => {
+  t.same(anyOf([ slash, dot, backslash ])('/'), { success: true, rest: '', val: '/' })
+  t.same(anyOf([ slash, dot, backslash ])('.'), { success: true, rest: '', val: '.' })
+  t.same(anyOf([ slash, dot, backslash ])('\\'), { success: true, rest: '', val: '\\' })
+  t.same(anyOf([ slash, dot, backslash ])('a'), { success: false, message: 'None matched' })
+  t.end()
+})
+
+test('concat', t => {
+  const fullName = concat([ alphas, atleastN(1, is(' ')), atleastN(1, isAlpha) ])
+
+  t.same(fullName('Steve Kane'), { success: true, rest: '', val: 'Steve Kane' })
+  t.same(fullName('Dick-Tracy'), { success: false, message: '- did not satisfy' })
   t.end()
 })
