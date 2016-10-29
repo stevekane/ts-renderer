@@ -5,7 +5,7 @@ import {
   eof, size, satisfy, match, exactly, consume, consume1, atleastN, many, many1,
   or, orDefault, anyOf, between, around, concat, seperatedBy,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
-  dash, dot, slash, backslash,
+  dash, dot, slash, backslash, newline,
   integer, real
 } from '../src/Parsers/parsers'
 
@@ -77,6 +77,14 @@ test('space', t => {
 
   t.same(spaces('   abcd'), { success: true, rest: 'abcd', val: '   ' })
   t.same(spaces('  '), { success: true, rest: '', val: '  ' })
+  t.end()
+})
+
+test('newline', t => {
+  t.same(newline('\n'), { success: true, rest: '', val: '\n' })
+  t.same(newline('\f'), { success: true, rest: '', val: '\f' })
+  t.same(newline('\r'), { success: true, rest: '', val: '\r' })
+  t.same(newline('\r\n'), { success: true, rest: '', val: '\r\n' })
   t.end()
 })
 
