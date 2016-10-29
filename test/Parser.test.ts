@@ -1,5 +1,5 @@
 import * as test from 'tape'
-import { flatMap, doThen } from '../src/Parsers/Parser'
+import { fmap, flatMap, doThen } from '../src/Parsers/Parser'
 import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
   eof, size, satisfy, match, exactly, consume, atleastN, many, many1, seperatedBy,
@@ -116,7 +116,13 @@ test('between', t => {
 })
 
 test('around', t => {
-  // TODO: test
+  const phParts = around(nums, dash, nums)
+  const phoneNumber = fmap(ps => ps.join(''), phParts)
+
+  t.same(phParts('867-5309'), { success: true, rest: '', val: [ '867', '5309' ] })
+  t.same(phoneNumber('867-5309'), { success: true, rest: '', val: '8675309' })
+  t.same(phParts('123'), { success: false, message: 'Nothing to consume' })
+  t.same(phParts('123/456'), { success: false, message: '/ did not satisfy' })
   t.end()
 })
 
