@@ -122,6 +122,15 @@ export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {
                              unit(out + out2)))
 }
 
+export function inRange (min: number, max: number, p: Parser<string>): Parser<string> {
+  return flatMap(p, x => {
+    const num = Number(x) 
+    const out = num >= min && num <= max ? unit(x) : failed('Out of range')
+
+    return out
+  })
+}
+
 export const dash = exactly('-')
 export const dot = exactly('.')
 export const slash = exactly('/')

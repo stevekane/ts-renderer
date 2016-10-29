@@ -1,10 +1,20 @@
-import { Parser, unit, flatMap, doThen, fmap } from './Parser'
+import { Parser, unit, failed, flatMap, doThen, fmap } from './Parser'
 import { 
-  spaces, real, or, exactly, many, seperatedBy, atleastN, between, around,
+  dash, spaces, dot, real, integer, nums, or, inRange,
+  exactly, match, many, seperatedBy, atleastN, between, around, concat,
   interspersing
 } from './parsers'
 import { isNumber, isAlpha, is } from './predicates'
 import { IGeometry } from '../Rendering/Geometry'
+
+// function inRange<A> (min: number, max: number, p: Parser<A>): Parser<A> {
+//   return flatMap(p, x => {
+//     const num = Number(x) 
+//     const out: Parser<A> = num >= min && num <= max ? unit(x) : failed('Out of range')
+// 
+//     return out
+//   })
+// }
 
 /*
   What is a face?  It's a set of connected vertices which are combinations
@@ -85,13 +95,15 @@ export const vertex: Parser<Line> =
   flatMap(doThen(spaces, or(real, unit('1.0'))), w =>
   unit(Vert(Number(x), Number(y), Number(z), Number(w))))))))
 
-// const texCoord: Parser<OBJ> =
-//   doThen(match('vt'),
-//   flatMap(consumeThen(spaces, real),                u =>
-//   flatMap(consumeThen(spaces, real),                v =>
-//   flatMap(consumeThen(spaces, or(real, unit(1.0))), w =>
-//   unit(TexCoord(u, v, w))))))
-// 
+const txCoord = inRange(0, 1, real)
+
+export const texCoord: Parser<Line> =
+  doThen(match('vt'),
+  flatMap(doThen(spaces, txCoord),                  u =>
+  flatMap(doThen(spaces, txCoord),                  v =>
+  flatMap(doThen(spaces, or(txCoord, unit('0.0'))), w =>
+  unit(TexCoord(Number(u), Number(v), Number(w)))))))
+
 // const normal: Parser<OBJ> =
 //   doThen(match('vn'),
 //   flatMap(consumeThen(spaces, real), x =>
