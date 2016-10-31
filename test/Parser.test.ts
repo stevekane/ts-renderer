@@ -4,7 +4,7 @@ import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
   eof, size, satisfy, match, exactly, consume, consume1, consumeAtleastN, 
   many, many1, atleastN,
-  or, orDefault, anyOf, between, around, concat, seperatedBy,
+  or, orDefault, optional, anyOf, between, around, concat, seperatedBy,
   alpha, alphas, num, nums, alphanum, alphanums, space, spaces,
   dash, dot, slash, backslash, newline,
   integer, real
@@ -155,6 +155,12 @@ test('or', t => {
 
   t.same(orDefault(slash, '/')('/'), { success: true, rest: '', val: '/' })
   t.same(orDefault(slash, '/')(''), { success: true, rest: '', val: '/' })
+  t.end()
+})
+
+test('optional', t => {
+  t.same(optional(dot)('.'), { success: true, rest: '', val: '.' })
+  t.same(optional(dot)(''), { success: true, rest: '', val: undefined })
   t.end()
 })
 

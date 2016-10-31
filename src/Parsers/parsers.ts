@@ -110,6 +110,10 @@ export function or<A> (p1: Parser<A>, p2: Parser<A>): Parser<A> {
   }
 }
 
+export function optional <A> (p: Parser<A>): Parser<A | undefined> {
+  return orDefault(p, undefined)
+}
+
 export function anyOf ([ head, ...rest ]: Parser<string>[]): Parser<string> {
   if ( head == null ) return failed('None matched')
   else                return or(head, anyOf(rest))

@@ -1,6 +1,6 @@
 import { Parser, unit, failed, flatMap, doThen, fmap } from './Parser'
 import { 
-  dash, slash, spaces, dot, real, integer, nums, or, orDefault, inRange,
+  dash, slash, spaces, dot, real, integer, nums, or, orDefault, optional, inRange,
   exactly, match, many, many1, seperatedBy, atleastN, between, around, concat,
   interspersing
 } from './parsers'
@@ -51,10 +51,10 @@ export type Line
 // w defaults to 1.0
 export const vertex: Parser<Line> =
   doThen(exactly('v'),
-  flatMap(doThen(spaces, real),                  x =>
-  flatMap(doThen(spaces, real),                  y =>
-  flatMap(doThen(spaces, real),                  z =>
-  flatMap(doThen(spaces, or(real, unit('1.0'))), w =>
+  flatMap(doThen(spaces, real),                   x =>
+  flatMap(doThen(spaces, real),                   y =>
+  flatMap(doThen(spaces, real),                   z =>
+  flatMap(doThen(spaces, orDefault(real, '1.0')), w =>
   unit(Vert(Number(x), Number(y), Number(z), Number(w))))))))
 
 // Only accept real values between 0.0 and 1.0, w defaults to 0.0
@@ -71,12 +71,6 @@ export const normal: Parser<Line> =
   flatMap(doThen(spaces, real), y =>
   flatMap(doThen(spaces, real), z =>
   unit(Normal(Number(x), Number(y), Number(z)))))))
-
-// TODO: implemented here for testing... move to parsers
-function optional <A> (p: Parser<A>): Parser<A | undefined> {
-  return orDefault(p, undefined)
-}
-
 
 const faceVertex =
   doThen(spaces,
