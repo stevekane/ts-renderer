@@ -1,61 +1,22 @@
 import { Parser, unit, failed, flatMap, doThen, fmap } from './Parser'
 import { 
-  dash, spaces, dot, real, integer, nums, or, inRange,
-  exactly, match, many, seperatedBy, atleastN, between, around, concat,
+  dash, slash, spaces, dot, real, integer, nums, or, orDefault, inRange,
+  exactly, match, many, many1, seperatedBy, atleastN, between, around, concat,
   interspersing
 } from './parsers'
 import { isNumber, isAlpha, is } from './predicates'
 import { IGeometry } from '../Rendering/Geometry'
 
-// function inRange<A> (min: number, max: number, p: Parser<A>): Parser<A> {
-//   return flatMap(p, x => {
-//     const num = Number(x) 
-//     const out: Parser<A> = num >= min && num <= max ? unit(x) : failed('Out of range')
-// 
-//     return out
-//   })
-// }
+const txCoord = inRange(0, 1, real)
 
-/*
-  What is a face?  It's a set of connected vertices which are combinations
-  of up to three properties: 
-    position
-    tex_coord?
-    normal?
-  The actual values are not encoded here, but rather indices into the 
-    v, vt, and vn arrays.
-
-  OpenGL assumes you will be drawing everything by indices in an Elements Array
-  which means that before you can feed this data to OpenGL, you must construct 
-  parallel arrays ( or a single joined array ) that contains all the data 
-  for every vertex.
-
-  EG: Here is a plane which has three vertices all of whom share a single normal
-
-  v -1.0 -1.0 0.0
-  v 1.0  1.0  0.0
-  v -1.0 1.0  0.0
-
-  vn 0.0 0.0 1.0
-
-  f 1 2 3
-
-  we NEED something like the following:
-
-  vertices = [ -1 -1  0    1  1  0   -1  1  0 ]
-  normals =  [  0  0  1    0  0  1    0  0  1 ]
-
-  which we got by iterating the faces in-order and filling arrays with data found
-  at that index into the already-parsed vertex array:
-*/
-
-type V3 = [ number, number, number ]
-type V4 = [ number, number, number, number ]
+export type V3 = [ number, number, number ]
+export type V4 = [ number, number, number, number ]
+export interface IFaceVertex { v: number, vt?: number, vn?: number }
 
 export interface IVertex   { kind: 'Vertex',   value: V4 }
 export interface ITexCoord { kind: 'TexCoord', value: V3 }
 export interface INormal   { kind: 'Normal',   value: V3 }
-export interface IFace     { kind: 'Face',     value: V4 }
+export interface IFace     { kind: 'Face',     value: IFaceVertex[] }
 export interface IIgnored  { kind: 'Ignored' }
 
 export const Vert = (x: number, y: number, z: number, w: number): IVertex => ({ 
@@ -68,9 +29,9 @@ export const TexCoord = (x: number, y: number, z: number): ITexCoord => ({
   value: [ x, y, z ]
 })
 
-export const Face = (x: number, y: number, z: number, w: number): IFace => ({ 
+export const Face = (indices: IFaceVertex[]): IFace => ({ 
   kind: 'Face', 
-  value: [ x, y, z, w ] 
+  value: indices
 })
 
 export const Normal = (x: number, y: number, z: number): INormal => ({ 
@@ -87,6 +48,7 @@ export type Line
   | IFace
   | IIgnored
 
+// w defaults to 1.0
 export const vertex: Parser<Line> =
   doThen(exactly('v'),
   flatMap(doThen(spaces, real),                  x =>
@@ -95,8 +57,7 @@ export const vertex: Parser<Line> =
   flatMap(doThen(spaces, or(real, unit('1.0'))), w =>
   unit(Vert(Number(x), Number(y), Number(z), Number(w))))))))
 
-const txCoord = inRange(0, 1, real)
-
+// Only accept real values between 0.0 and 1.0, w defaults to 0.0
 export const texCoord: Parser<Line> =
   doThen(match('vt'),
   flatMap(doThen(spaces, txCoord),                  u =>
@@ -104,21 +65,33 @@ export const texCoord: Parser<Line> =
   flatMap(doThen(spaces, or(txCoord, unit('0.0'))), w =>
   unit(TexCoord(Number(u), Number(v), Number(w)))))))
 
-// const normal: Parser<OBJ> =
-//   doThen(match('vn'),
-//   flatMap(consumeThen(spaces, real), x =>
-//   flatMap(consumeThen(spaces, real), y =>
-//   flatMap(consumeThen(spaces, real), z =>
-//   unit(Normal(x, y, z))))))
-// 
-// 
-// const face: Parser<OBJ> = 
-//   doThen(match('f'), 
-//   flatMap(many(match('1')), indices =>
-//   doThen(match('\n'),
-//   //unit(Face(indices[0], indices[1], indices[2], indices[3])))))
-//   unit(Face(1, 2, 3, 4)))))
-// 
+export const normal: Parser<Line> =
+  doThen(match('vn'),
+  flatMap(doThen(spaces, real), x =>
+  flatMap(doThen(spaces, real), y =>
+  flatMap(doThen(spaces, real), z =>
+  unit(Normal(Number(x), Number(y), Number(z)))))))
+
+// TODO: implemented here for testing... move to parsers
+function optional <A> (p: Parser<A>): Parser<A | undefined> {
+  return orDefault(p, undefined)
+}
+
+
+const faceVertex =
+  doThen(spaces,
+  flatMap(integer, v => 
+  flatMap(optional(doThen(slash, optional(integer))), vt =>
+  flatMap(optional(doThen(slash, integer)), vn =>
+  unit({ 
+    v: Number(v), 
+    vt: vt != null ? Number(vt) : undefined, 
+    vn: vn != null ? Number(vn) : undefined })))))
+
+export const face: Parser<Line> = 
+  doThen(match('f'), 
+  fmap(Face, atleastN(3, doThen(spaces, faceVertex))))
+
 // const ignored: Parser<OBJ> =
 //   doThen(manyStr(ncr), 
 //   doThen(cr,
