@@ -126,13 +126,11 @@ export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {
                              unit(out + out2)))
 }
 
-export function inRange (min: number, max: number, p: Parser<string>): Parser<string> {
-  return flatMap(p, x => {
-    const num = Number(x) 
-    const out = num >= min && num <= max ? unit(x) : failed('Out of range')
-
-    return out
-  })
+export function inRange (min: number, max: number, p: Parser<number>): Parser<number> {
+  return flatMap(p, 
+          x => x >= min && x <= max 
+            ? unit(x) 
+            : failed('Out of range') as Parser<number>)
 }
 
 export const dash = exactly('-')
@@ -147,6 +145,12 @@ export const nums = consume(isNumber)
 export const alphanums = consume(n => isNumber(n) || isAlpha(n))
 export const space = exactly(' ') 
 export const spaces = consume(n => n === ' ')
-export const integer = concat([ orDefault(dash, ''), consumeAtleastN(1, isNumber) ])
-export const real = concat([ integer, dot, consumeAtleastN(1, isNumber) ])
 export const newline = anyOf([ exactly('\n'), exactly('\f'), match('\r\n'), exactly('\r') ])
+export const integer = fmap(Number, concat([ 
+  orDefault(dash, ''), 
+  consumeAtleastN(1, isNumber) ]))
+export const real = fmap(Number, concat([ 
+  orDefault(dash, ''), 
+  consumeAtleastN(1, isNumber), 
+  dot, 
+  consumeAtleastN(1, isNumber) ]))

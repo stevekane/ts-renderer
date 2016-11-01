@@ -48,39 +48,34 @@ export type Line
   | IFace
   | IIgnored
 
-// w defaults to 1.0
 export const vertex: Parser<Line> =
   doThen(exactly('v'),
-  flatMap(doThen(spaces, real),                   x =>
-  flatMap(doThen(spaces, real),                   y =>
-  flatMap(doThen(spaces, real),                   z =>
-  flatMap(doThen(spaces, orDefault(real, '1.0')), w =>
-  unit(Vert(Number(x), Number(y), Number(z), Number(w))))))))
+  flatMap(doThen(spaces, real),                 x =>
+  flatMap(doThen(spaces, real),                 y =>
+  flatMap(doThen(spaces, real),                 z =>
+  flatMap(doThen(spaces, orDefault(real, 1.0)), w =>
+  unit(Vert(x, y, z, w)))))))
 
-// Only accept real values between 0.0 and 1.0, w defaults to 0.0
 export const texCoord: Parser<Line> =
   doThen(match('vt'),
-  flatMap(doThen(spaces, txCoord),                  u =>
-  flatMap(doThen(spaces, txCoord),                  v =>
-  flatMap(doThen(spaces, or(txCoord, unit('0.0'))), w =>
-  unit(TexCoord(Number(u), Number(v), Number(w)))))))
+  flatMap(doThen(spaces, txCoord),                 u =>
+  flatMap(doThen(spaces, txCoord),                 v =>
+  flatMap(doThen(spaces, orDefault(txCoord, 0.0)), w =>
+  unit(TexCoord(u, v, w))))))
 
 export const normal: Parser<Line> =
   doThen(match('vn'),
   flatMap(doThen(spaces, real), x =>
   flatMap(doThen(spaces, real), y =>
   flatMap(doThen(spaces, real), z =>
-  unit(Normal(Number(x), Number(y), Number(z)))))))
+  unit(Normal(x, y, z))))))
 
 const faceVertex =
   doThen(spaces,
-  flatMap(integer, v => 
+  flatMap(integer,                                    v => 
   flatMap(optional(doThen(slash, optional(integer))), vt =>
-  flatMap(optional(doThen(slash, integer)), vn =>
-  unit({ 
-    v: Number(v), 
-    vt: vt != null ? Number(vt) : undefined, 
-    vn: vn != null ? Number(vn) : undefined })))))
+  flatMap(optional(doThen(slash, integer)),           vn =>
+  unit({ v, vt, vn })))))
 
 export const face: Parser<Line> = 
   doThen(match('f'), 
