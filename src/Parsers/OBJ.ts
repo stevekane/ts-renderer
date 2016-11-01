@@ -18,7 +18,7 @@ export interface IVertex   { kind: 'Vertex',   value: V4 }
 export interface ITexCoord { kind: 'TexCoord', value: V3 }
 export interface INormal   { kind: 'Normal',   value: V3 }
 export interface IFace     { kind: 'Face',     value: IFaceVertex[] }
-export interface IIgnored  { kind: 'Ignored' }
+export interface IIgnored  { kind: 'Ignored',  value: string }
 
 export const Vert = (x: number, y: number, z: number, w: number): IVertex => ({ 
   kind: 'Vertex', 
@@ -40,7 +40,10 @@ export const Normal = (x: number, y: number, z: number): INormal => ({
   value: [ x, y, z ] 
 })
 
-export const Ignored = (): IIgnored => ({ kind: 'Ignored' })
+export const Ignored = (s: string): IIgnored => ({ 
+  kind: 'Ignored',
+  value: s
+})
 
 export type Line
   = IVertex 
@@ -82,9 +85,9 @@ export const face: Parser<Line> =
   lift(Face, 
        doThen(match('f'), atleastN(3, spaced(faceVertex))))
 
+// TODO: more efficient if there was a consume that 
 export const ignored: Parser<Line> =
-  doThen(many1(anyChar),
-  unit(Ignored()))
+  lift(Ignored, fmap(cs => cs.join(''), many1(anyChar)))
 
 export const line: Parser<Line> = 
   anyOf([ vertex, texCoord, normal, face, ignored ])

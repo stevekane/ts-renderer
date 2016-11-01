@@ -88,17 +88,17 @@ test('face', t => {
 test('ignored', t => {
   const l = 'abc\ndef\n'
 
-  t.same(ignored('afslkjashflkajshflakjh'), new Result(Ignored(), ''))
-  t.same(ignored('abc\ndef'), new Result(Ignored(), ''))
+  t.same(ignored('bart'), new Result(Ignored('bart'), ''))
+  t.same(ignored('abc\ndef'), new Result(Ignored('abc\ndef'), ''))
   t.end()
 })
 
 test('line', t => {
   const fstr = 'f 1//1 2//2 3//3'
-  const cmntStr = '#laskjfhaljksfhalsfkjsa'
+  const cmntStr = '#hi'
 
   t.same(line(fstr), new Result(Face([ FVN(1,1), FVN(2,2), FVN(3,3) ]), ''))
-  t.same(line(cmntStr), new Result(Ignored(), ''))
+  t.same(line(cmntStr), new Result(Ignored('#hi'), ''))
   t.end()
 })
 
