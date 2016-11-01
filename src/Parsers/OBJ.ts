@@ -51,7 +51,6 @@ export type Line
 
 const spaced = <A> (p: Parser<A>): Parser<A> => doThen(spaces, p)
 const txCoord = inRange(0, 1, real)
-const term = or(eof, newline)
 const anyChar = satisfy(_ => true)
 
 const faceVertex =
@@ -91,16 +90,25 @@ export const line: Parser<Line> =
   anyOf([ vertex, texCoord, normal, face, ignored ])
 
 function linesToGeometry (lines: Line[]): IGeometry {
+  const pVertices: V4[] = []
+  const pNormals: V3[] = []
   const vertices: number[] = []
   const normals: number[] = []
   const indices: number[] = []
 
   for ( const l of lines ) {
-    if      ( l.kind === 'Vertex' ) vertices.push(...l.value)
-    else if ( l.kind === 'Normal' ) normals.push(...l.value)
-    // else if ( l.kind === 'Face' )   indices.push(...l.value.map(n => n - 1)) 
+    if      ( l.kind === 'Vertex' ) pVertices.push(l.value)
+    else if ( l.kind === 'Normal' ) pNormals.push(l.value)
+    else if ( l.kind === 'Face' ) {
+      for ( const fv of l.value ) {
+        vertices.push(...pVertices[fv.v - 1])
+        normals.push(...(fv.vn != null ? pNormals[fv.vn - 1] : [ 0, 0, 1 ]))
+        indices.push(fv.v - 1)
+      }
+    }
     else {}
   }
+  
   return { 
     indices: new Uint16Array(indices),
     vertices: new Float32Array(vertices),
