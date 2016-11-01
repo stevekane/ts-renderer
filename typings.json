@@ -1,5 +1,6 @@
 {
-  "globalDependencies": {
+  "globalDependencies": {},
+  "globalDevDependencies": {
     "tape": "registry:dt/tape#4.2.2+20160317120654"
   }
 }
