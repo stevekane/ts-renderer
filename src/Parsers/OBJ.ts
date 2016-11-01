@@ -1,8 +1,10 @@
-import { Parser, unit, failed, flatMap, doThen, fmap } from './Parser'
+import { 
+  Parser, unit, failed, fmap, apply, lift, lift3, lift4, flatMap, doThen 
+} from './Parser'
 import { 
   dash, slash, spaces, dot, real, integer, nums, newline, eof,
   or, orDefault, optional, anyOf, inRange, satisfy,
-  exactly, match, many, manyTill, seperatedBy, atleastN, between, around, concat,
+  exactly, match, many1, many, atleastN,
   interspersing
 } from './parsers'
 import { isNumber, isAlpha, is } from './predicates'
@@ -47,71 +49,64 @@ export type Line
   | IFace
   | IIgnored
 
+const spaced = <A> (p: Parser<A>): Parser<A> => doThen(spaces, p)
 const txCoord = inRange(0, 1, real)
 const term = or(eof, newline)
 const anyChar = satisfy(_ => true)
 
 const faceVertex =
-  doThen(spaces,
-  flatMap(integer,                                    v => 
-  flatMap(optional(doThen(slash, optional(integer))), vt =>
-  flatMap(optional(doThen(slash, integer)),           vn =>
-  unit({ v, vt, vn })))))
+  lift3((v, vt, vn) => ({ v, vt, vn }),
+  spaced(integer),
+  optional(doThen(slash, optional(integer))),
+  optional(doThen(slash, integer)))
 
 export const vertex: Parser<Line> =
-  doThen(exactly('v'),
-  flatMap(doThen(spaces, real),                 x =>
-  flatMap(doThen(spaces, real),                 y =>
-  flatMap(doThen(spaces, real),                 z =>
-  flatMap(doThen(spaces, orDefault(real, 1.0)), w =>
-  doThen(term,
-  unit(Vert(x, y, z, w))))))))
+  lift4(Vert, 
+        doThen(exactly('v'), spaced(real)), 
+        spaced(real), 
+        spaced(real), 
+        spaced(orDefault(real, 1.0)))
 
 export const texCoord: Parser<Line> =
-  doThen(match('vt'),
-  flatMap(doThen(spaces, txCoord),                 u =>
-  flatMap(doThen(spaces, txCoord),                 v =>
-  flatMap(doThen(spaces, orDefault(txCoord, 0.0)), w =>
-  doThen(term,
-  unit(TexCoord(u, v, w)))))))
+  lift3(TexCoord,
+        doThen(match('vt'), spaced(txCoord)),
+        spaced(txCoord),
+        spaced(orDefault(txCoord, 0.0)))
 
 export const normal: Parser<Line> =
-  doThen(match('vn'),
-  flatMap(doThen(spaces, real), x =>
-  flatMap(doThen(spaces, real), y =>
-  flatMap(doThen(spaces, real), z =>
-  doThen(term,
-  unit(Normal(x, y, z)))))))
+  lift3(Normal,
+        doThen(match('vn'), spaced(real)),
+        spaced(real),
+        spaced(real))
 
 export const face: Parser<Line> = 
-  doThen(match('f'), 
-  flatMap(atleastN(3, doThen(spaces, faceVertex)), fvs =>
-  doThen(term,
-  unit(Face(fvs)))))
+  lift(Face, 
+       doThen(match('f'), atleastN(3, spaced(faceVertex))))
 
 export const ignored: Parser<Line> =
-  doThen(manyTill(anyChar, term),
+  doThen(many1(anyChar),
   unit(Ignored()))
 
 export const line: Parser<Line> = 
   anyOf([ vertex, texCoord, normal, face, ignored ])
 
-// function linesToGeometry (lines: OBJ[]): IGeometry {
-//   const vertices: number[] = []
-//   const normals: number[] = []
-//   const indices: number[] = []
-// 
-//   for ( const l of lines ) {
-//     if      ( l.kind === 'Vertex' ) vertices.push(...l.value)
-//     else if ( l.kind === 'Normal' ) normals.push(...l.value)
-//     else if ( l.kind === 'Face' )   indices.push(...l.value.map(n => n - 1)) 
-//     else {}
-//   }
-//   return { 
-//     indices: new Uint16Array(indices),
-//     vertices: new Float32Array(vertices),
-//     normals: new Float32Array(normals)
-//   }
-// }
-// 
-// export const parseOBJ = fmap(linesToGeometry, many(line))
+function linesToGeometry (lines: Line[]): IGeometry {
+  const vertices: number[] = []
+  const normals: number[] = []
+  const indices: number[] = []
+
+  for ( const l of lines ) {
+    if      ( l.kind === 'Vertex' ) vertices.push(...l.value)
+    else if ( l.kind === 'Normal' ) normals.push(...l.value)
+    // else if ( l.kind === 'Face' )   indices.push(...l.value.map(n => n - 1)) 
+    else {}
+  }
+  return { 
+    indices: new Uint16Array(indices),
+    vertices: new Float32Array(vertices),
+    normals: new Float32Array(normals)
+  }
+}
+
+export const parseOBJ = 
+  fmap(linesToGeometry, interspersing(line, many(newline)))

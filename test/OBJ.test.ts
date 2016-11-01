@@ -1,10 +1,13 @@
 import * as test from 'tape'
-import { Parser, unit, failed, flatMap, Err, Result } from '../src/Parsers/Parser'
-import { manyTill, eof } from '../src/Parsers/parsers'
+import { Parser, unit, failed, flatMap, doThen, Err, Result } from '../src/Parsers/Parser'
+import { 
+  interspersing, many, many1, manyTill, between, newline, eof 
+} from '../src/Parsers/parsers'
 import { 
   IFaceVertex,
   Vert, TexCoord, Normal, Face, Ignored,
-  vertex, texCoord, normal, face, ignored, line
+  vertex, texCoord, normal, face, ignored, line,
+  parseOBJ
 } from '../src/Parsers/OBJ'
 
 const FV = (v: number): IFaceVertex => 
@@ -86,7 +89,7 @@ test('ignored', t => {
   const l = 'abc\ndef\n'
 
   t.same(ignored('afslkjashflkajshflakjh'), new Result(Ignored(), ''))
-  t.same(ignored('abc\ndef'), new Result(Ignored(), 'def'))
+  t.same(ignored('abc\ndef'), new Result(Ignored(), ''))
   t.end()
 })
 
@@ -99,9 +102,9 @@ test('line', t => {
   t.end()
 })
 
-test('lines', t => {
-  const parsedLines = manyTill(line, eof)(example)
+test('parseOBJ', t => {
+  const out = parseOBJ(example)
 
-  console.log(parsedLines)
+  console.log(out)
   t.end()
 })

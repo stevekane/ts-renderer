@@ -1,5 +1,7 @@
 import * as test from 'tape'
-import { fmap, flatMap, doThen } from '../src/Parsers/Parser'
+import { 
+  Parser, unit, fmap, apply, lift, lift2, lift3, lift4, flatMap, doThen 
+} from '../src/Parsers/Parser'
 import { is, isAlpha, isNumber } from '../src/Parsers/predicates'
 import { 
   eof, size, satisfy, match, exactly, consume, consume1, consumeAtleastN,
@@ -9,6 +11,17 @@ import {
   dash, dot, slash, backslash, newline,
   integer, real
 } from '../src/Parsers/parsers'
+
+test('apply', t => {
+  const out = apply(unit((s: string) => s + '!'), alphas)
+  const out2 = lift((s: string) => s + '!', alphas)
+  const sum = lift2((a, b) => a + b, integer, doThen(slash, integer))
+
+  t.same(out('test'), { success: true, rest: '', val: 'test!' })
+  t.same(out2('test'), { success: true, rest: '', val: 'test!' })
+  t.same(sum('5/5'), { success: true, rest: '', val: 10 })
+  t.end() 
+})
 
 test('eof', t => {
   t.same(eof(''), { success: true, rest: '', val: null })

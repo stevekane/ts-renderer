@@ -1,1 +1,1 @@
-console.error("TypeScript error: src/main.ts(7,10): Error TS2305: Module '\"src/Parsers/OBJ\"' has no exported member 'parseOBJ'.");
+console.error("TypeScript error: typings/globals/tape/index.d.ts(55,60): Error TS2503: Cannot find namespace 'NodeJS'.");
