@@ -92,17 +92,21 @@ export const line: Parser<Line> =
 function linesToGeometry (lines: Line[]): IGeometry {
   const pVertices: V4[] = []
   const pNormals: V3[] = []
+  const pTexCoords: V3[] = []
   const vertices: number[] = []
   const normals: number[] = []
+  const texCoords: number[] = []
   const indices: number[] = []
 
   for ( const l of lines ) {
-    if      ( l.kind === 'Vertex' ) pVertices.push(l.value)
-    else if ( l.kind === 'Normal' ) pNormals.push(l.value)
+    if      ( l.kind === 'Vertex' )   pVertices.push(l.value)
+    else if ( l.kind === 'Normal' )   pNormals.push(l.value)
+    else if ( l.kind === 'TexCoord' ) pTexCoords.push(l.value)
     else if ( l.kind === 'Face' ) {
       for ( const fv of l.value ) {
         vertices.push(...pVertices[fv.v - 1])
         normals.push(...(fv.vn != null ? pNormals[fv.vn - 1] : [ 0, 0, 1 ]))
+        texCoords.push(...(fv.vt != null ? pTexCoords[fv.vt - 1] : [ 0, 0, 0 ]))
         indices.push(fv.v - 1)
       }
     }
@@ -112,6 +116,7 @@ function linesToGeometry (lines: Line[]): IGeometry {
   return { 
     indices: new Uint16Array(indices),
     vertices: new Float32Array(vertices),
+    // texCoords: new Float32Array(texCoords), TODO: Not on IGeometry yet
     normals: new Float32Array(normals)
   }
 }
