@@ -1,13 +1,12 @@
 import { Parser, unit, failed, flatMap, doThen, fmap } from './Parser'
 import { 
-  dash, slash, spaces, dot, real, integer, nums, or, orDefault, optional, inRange,
-  exactly, match, many, many1, seperatedBy, atleastN, between, around, concat,
+  dash, slash, spaces, dot, real, integer, nums, newline, eof,
+  or, orDefault, optional, anyOf, inRange, satisfy,
+  exactly, match, many, manyTill, seperatedBy, atleastN, between, around, concat,
   interspersing
 } from './parsers'
 import { isNumber, isAlpha, is } from './predicates'
 import { IGeometry } from '../Rendering/Geometry'
-
-const txCoord = inRange(0, 1, real)
 
 export type V3 = [ number, number, number ]
 export type V4 = [ number, number, number, number ]
@@ -48,27 +47,9 @@ export type Line
   | IFace
   | IIgnored
 
-export const vertex: Parser<Line> =
-  doThen(exactly('v'),
-  flatMap(doThen(spaces, real),                 x =>
-  flatMap(doThen(spaces, real),                 y =>
-  flatMap(doThen(spaces, real),                 z =>
-  flatMap(doThen(spaces, orDefault(real, 1.0)), w =>
-  unit(Vert(x, y, z, w)))))))
-
-export const texCoord: Parser<Line> =
-  doThen(match('vt'),
-  flatMap(doThen(spaces, txCoord),                 u =>
-  flatMap(doThen(spaces, txCoord),                 v =>
-  flatMap(doThen(spaces, orDefault(txCoord, 0.0)), w =>
-  unit(TexCoord(u, v, w))))))
-
-export const normal: Parser<Line> =
-  doThen(match('vn'),
-  flatMap(doThen(spaces, real), x =>
-  flatMap(doThen(spaces, real), y =>
-  flatMap(doThen(spaces, real), z =>
-  unit(Normal(x, y, z))))))
+const txCoord = inRange(0, 1, real)
+const term = or(eof, newline)
+const anyChar = satisfy(_ => true)
 
 const faceVertex =
   doThen(spaces,
@@ -77,23 +58,44 @@ const faceVertex =
   flatMap(optional(doThen(slash, integer)),           vn =>
   unit({ v, vt, vn })))))
 
+export const vertex: Parser<Line> =
+  doThen(exactly('v'),
+  flatMap(doThen(spaces, real),                 x =>
+  flatMap(doThen(spaces, real),                 y =>
+  flatMap(doThen(spaces, real),                 z =>
+  flatMap(doThen(spaces, orDefault(real, 1.0)), w =>
+  doThen(term,
+  unit(Vert(x, y, z, w))))))))
+
+export const texCoord: Parser<Line> =
+  doThen(match('vt'),
+  flatMap(doThen(spaces, txCoord),                 u =>
+  flatMap(doThen(spaces, txCoord),                 v =>
+  flatMap(doThen(spaces, orDefault(txCoord, 0.0)), w =>
+  doThen(term,
+  unit(TexCoord(u, v, w)))))))
+
+export const normal: Parser<Line> =
+  doThen(match('vn'),
+  flatMap(doThen(spaces, real), x =>
+  flatMap(doThen(spaces, real), y =>
+  flatMap(doThen(spaces, real), z =>
+  doThen(term,
+  unit(Normal(x, y, z)))))))
+
 export const face: Parser<Line> = 
   doThen(match('f'), 
-  fmap(Face, atleastN(3, doThen(spaces, faceVertex))))
+  flatMap(atleastN(3, doThen(spaces, faceVertex)), fvs =>
+  doThen(term,
+  unit(Face(fvs)))))
 
-// const ignored: Parser<OBJ> =
-//   doThen(manyStr(ncr), 
-//   doThen(cr,
-//   unit(Ignored())))
+export const ignored: Parser<Line> =
+  doThen(manyTill(anyChar, term),
+  unit(Ignored()))
 
-// const line: Parser<OBJ> = 
-//   doThen(spaces, 
-//   or(vertex,
-//   or(normal,
-//   or(face,
-//   or(ignored,
-//   texCoord)))))
-// 
+export const line: Parser<Line> = 
+  anyOf([ vertex, texCoord, normal, face, ignored ])
+
 // function linesToGeometry (lines: OBJ[]): IGeometry {
 //   const vertices: number[] = []
 //   const normals: number[] = []

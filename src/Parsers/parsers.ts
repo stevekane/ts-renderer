@@ -57,7 +57,6 @@ export function consumeAtleastN (n: number, f: (s: string) => boolean): Parser<s
   }
 }
 
-
 export function many<A> (p: Parser<A>): Parser<A[]> {
   return or(many1(p), unit([]))
 }
@@ -66,6 +65,14 @@ export function many1<A> (p: Parser<A>): Parser<A[]> {
   return flatMap(p,        x =>
          flatMap(many(p), xs =>
          unit([ x, ...xs ])))
+}
+
+export function manyTill<A, B> (p: Parser<A>, end: Parser<B>): Parser<A[]> {
+  const scan: Parser<A[]> = or(
+    flatMap(end, _ => unit([] as A[])), 
+    flatMap(p, x => flatMap(scan, xs => unit([ x ].concat(xs)))))
+
+  return scan
 }
 
 export function atleastN<A> (n: number, p: Parser<A>): Parser<A[]> {
@@ -114,9 +121,9 @@ export function optional <A> (p: Parser<A>): Parser<A | undefined> {
   return orDefault(p, undefined)
 }
 
-export function anyOf ([ head, ...rest ]: Parser<string>[]): Parser<string> {
-  if ( head == null ) return failed('None matched')
-  else                return or(head, anyOf(rest))
+export function anyOf<A> ([ head, ...rest ]: Parser<A>[]): Parser<A> {
+  if ( head == null ) return failed('None matched') as Parser<A>
+  else                return or(head, anyOf(rest)) as Parser<A>
 }
 
 export function concat ([ head, ...rest ]: Parser<string>[]): Parser<string> {

@@ -1,11 +1,38 @@
 import * as test from 'tape'
 import { Parser, unit, failed, flatMap, Err, Result } from '../src/Parsers/Parser'
-import { real } from '../src/Parsers/parsers'
+import { manyTill, eof } from '../src/Parsers/parsers'
 import { 
   IFaceVertex,
-  Vert, TexCoord, Normal, Face,
-  vertex, texCoord, normal, face
+  Vert, TexCoord, Normal, Face, Ignored,
+  vertex, texCoord, normal, face, ignored, line
 } from '../src/Parsers/OBJ'
+
+const FV = (v: number): IFaceVertex => 
+  ({ v, vt: undefined, vn: undefined })
+const FVT = (v: number, vt: number): IFaceVertex => 
+  ({ v, vt, vn: undefined })
+const FVN = (v: number, vn: number): IFaceVertex => 
+  ({ v, vn, vt: undefined })
+const FVTN = (v: number, vt: number, vn: number): IFaceVertex => 
+  ({ v, vt, vn })
+
+const example = 
+`
+v 0.000000 0.250000 0.250000
+v 0.000000 0.000000 0.250000
+v 0.250000 0.000000 0.250000
+v 0.250000 0.250000 0.250000
+v 0.000000 0.250000 0.000000
+v 0.000000 0.000000 0.000000
+v 0.250000 0.000000 0.000000
+v 0.250000 0.250000 0.000000
+f 1 2 3 4
+f 8 7 6 5
+f 4 3 7 8
+f 5 1 4 8
+f 5 6 2 1
+f 2 6 7 3
+`
 
 test('vertex', t => {
   const vstr = 'v 1.1 2.2 3.3'
@@ -41,14 +68,6 @@ test('normal', t => {
 })
 
 test('face', t => {
-  const FV = (v: number): IFaceVertex => 
-    ({ v, vt: undefined, vn: undefined })
-  const FVT = (v: number, vt: number): IFaceVertex => 
-    ({ v, vt, vn: undefined })
-  const FVN = (v: number, vn: number): IFaceVertex => 
-    ({ v, vn, vt: undefined })
-  const FVTN = (v: number, vt: number, vn: number): IFaceVertex => 
-    ({ v, vt, vn })
   const nstr1 = 'f 1 2 3'
   const nstr2 = 'f 1 1 1 1'
   const nstr3 = 'f 1/1 2/2 3/3'
@@ -60,5 +79,29 @@ test('face', t => {
   t.same(face(nstr3), new Result(Face([ FVT(1,1), FVT(2,2), FVT(3,3) ]), ''))
   t.same(face(nstr4), new Result(Face([ FVTN(1,1,1), FVTN(2,2,2), FVTN(3,3,3) ]), ''))
   t.same(face(nstr5), new Result(Face([ FVN(1,1), FVN(2,2), FVN(3,3) ]), ''))
+  t.end()
+})
+
+test('ignored', t => {
+  const l = 'abc\ndef\n'
+
+  t.same(ignored('afslkjashflkajshflakjh'), new Result(Ignored(), ''))
+  t.same(ignored('abc\ndef'), new Result(Ignored(), 'def'))
+  t.end()
+})
+
+test('line', t => {
+  const fstr = 'f 1//1 2//2 3//3'
+  const cmntStr = '#laskjfhaljksfhalsfkjsa'
+
+  t.same(line(fstr), new Result(Face([ FVN(1,1), FVN(2,2), FVN(3,3) ]), ''))
+  t.same(line(cmntStr), new Result(Ignored(), ''))
+  t.end()
+})
+
+test('lines', t => {
+  const parsedLines = manyTill(line, eof)(example)
+
+  console.log(parsedLines)
   t.end()
 })
