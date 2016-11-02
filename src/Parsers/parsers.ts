@@ -58,7 +58,19 @@ export function consumeAtleastN (n: number, f: (s: string) => boolean): Parser<s
 }
 
 export function many<A> (p: Parser<A>): Parser<A[]> {
-  return or(many1(p), unit([]))
+  return function (s: string): Outcome<A[]> {
+    var result: Outcome<A>
+    var out: A[] = []
+    var remaining = s
+
+    while ( true ) {
+      result = p(remaining)
+      if ( !result.success ) break
+      out.push(result.val)
+      remaining = result.rest
+    }
+    return new Result(out, remaining)
+  }
 }
 
 export function many1<A> (p: Parser<A>): Parser<A[]> {

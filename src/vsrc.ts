@@ -8,6 +8,8 @@ uniform float u_time;
 uniform vec3 u_position;
 uniform vec3 u_scale;
 uniform vec3 u_rotation;
+uniform mat4 u_view;
+uniform mat4 u_projection;
 
 mat4 translate_from (vec3 v) {
   return mat4(
@@ -67,9 +69,10 @@ mat4 model_mat (vec3 pos, vec3 scale, vec3 rot) {
 }
 
 void main () { 
-  mat4 m = model_mat(u_position, u_scale, u_rotation);
-  vec4 pos = vec4(a_coord, 1.0);
-
-  gl_Position = m * pos; 
+  gl_Position 
+    = u_projection 
+    * u_view 
+    * model_mat(u_position, u_scale, u_rotation)
+    * vec4(a_coord, 1.0); 
 }
 `

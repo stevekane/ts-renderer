@@ -7,7 +7,9 @@ export interface IMesh {
     u_time: WebGLUniformLocation,
     u_position: WebGLUniformLocation,
     u_scale: WebGLUniformLocation, 
-    u_rotation: WebGLUniformLocation
+    u_rotation: WebGLUniformLocation,
+    u_view: WebGLUniformLocation
+    u_projection: WebGLUniformLocation
   }
   attributes: {
     a_coord: number

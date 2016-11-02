@@ -1,6 +1,7 @@
 {
   "globalDependencies": {},
-  "globalDevDependencies": {
-    "tape": "registry:dt/tape#4.2.2+20160317120654"
+  "globalDevDependencies": {},
+  "dependencies": {
+    "gl-matrix": "registry:dt/gl-matrix#2.2.2+20160815161326"
   }
 }

@@ -85,7 +85,6 @@ export const face: Parser<Line> =
   lift(Face, 
        doThen(match('f'), atleastN(3, spaced(faceVertex))))
 
-// TODO: more efficient if there was a consume combinator for string catting
 export const ignored: Parser<Line> =
   lift(Ignored, fmap(cs => cs.join(''), many1(anyChar)))
 
@@ -101,13 +100,15 @@ function linesToGeometry (lines: Line[]): IGeometry {
   const texCoords: number[] = []
   const indices: number[] = []
 
+  console.log('hi')
   for ( const l of lines ) {
-    if      ( l.kind === 'Vertex' )   pVertices.push(l.value)
+    if      ( l.kind === 'Vertex' )   vertices.push(l.value[0], l.value[1], l.value[2])
     else if ( l.kind === 'Normal' )   pNormals.push(l.value)
     else if ( l.kind === 'TexCoord' ) pTexCoords.push(l.value)
     else if ( l.kind === 'Face' ) {
       for ( const fv of l.value ) {
-        vertices.push(pVertices[fv.v - 1][0], pVertices[fv.v - 1][1], pVertices[fv.v -1][2])
+        // TODO: normals and texCoords are not handled correctly yet. just ignored
+        // by shader atm
         normals.push(...(fv.vn != null ? pNormals[fv.vn - 1] : [ 0, 0, 1 ]))
         texCoords.push(...(fv.vt != null ? pTexCoords[fv.vt - 1] : [ 0, 0, 0 ]))
         indices.push(fv.v - 1)
