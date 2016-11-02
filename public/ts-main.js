@@ -605,18 +605,8 @@ const Load_1 = require('./Load');
 const GL_Program_1 = require('./GL-Program');
 const OBJ_1 = require('./Parsers/OBJ');
 const Matrix_1 = require('./Matrix');
-// TODO: this should take a camera as argument.
-function drawRenderable(gl, r) {
+function drawRenderable(gl, cam, r) {
     const { program, attributes, uniforms, geometry } = r.mesh;
-    const up = Matrix_1.V3(0, 1, 0);
-    const center = r.position;
-    const eye = Matrix_1.V3(0, 1, 5);
-    const view = Matrix_1.lookAt(Matrix_1.M4(), eye, center, up);
-    const vfovy = Math.PI / 4;
-    const aspectRatio = c.width / c.height; //TODO: 'c' IS A GLOBAL VAR!
-    const near = 0.1;
-    const far = 10000;
-    const projection = Matrix_1.perspective(Matrix_1.M4(), vfovy, aspectRatio, near, far);
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_coord);
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
@@ -628,8 +618,8 @@ function drawRenderable(gl, r) {
     gl.uniform3f(uniforms.u_position, r.position[0], r.position[1], r.position[2]);
     gl.uniform3f(uniforms.u_rotation, r.rotation[0], r.rotation[1], r.rotation[2]);
     gl.uniform3f(uniforms.u_scale, r.scale[0], r.scale[1], r.scale[2]);
-    gl.uniformMatrix4fv(uniforms.u_view, false, view);
-    gl.uniformMatrix4fv(uniforms.u_projection, false, projection);
+    gl.uniformMatrix4fv(uniforms.u_view, false, cam.view);
+    gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection);
     gl.drawElements(gl.TRIANGLE_FAN, geometry.indices.length, gl.UNSIGNED_SHORT, 0);
 }
 const now = performance ? performance.now.bind(performance) : Date.now;
@@ -671,13 +661,27 @@ if (p.success) {
                 indices: gl.createBuffer()
             }
         };
+        const cam = {
+            position: new Float32Array([0, 1, 5]),
+            view: Matrix_1.M4(),
+            projection: Matrix_1.M4(),
+            vfov: Math.PI / 4,
+            aspectRatio: c.width / c.height,
+            near: 0.1,
+            far: 10000,
+            up: Matrix_1.V3(0, 1, 0),
+            at: Matrix_1.V3(0, 0, 0)
+        };
         requestAnimationFrame(function render() {
             const t = now();
             entity.rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
+            cam.aspectRatio = c.width / c.height;
+            Matrix_1.lookAt(cam.view, cam.position, cam.at, cam.up);
+            Matrix_1.perspective(cam.projection, cam.vfov, cam.aspectRatio, cam.near, cam.far);
             gl.viewport(0, 0, c.width, c.height);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            drawRenderable(gl, entity);
+            drawRenderable(gl, cam, entity);
             requestAnimationFrame(render);
         });
     });

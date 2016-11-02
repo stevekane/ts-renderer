@@ -3,22 +3,12 @@ import fsrc from './fsrc'
 import { loadXHR } from './Load'
 import { fromSource } from './GL-Program'
 import { IRenderable } from './Rendering/core'
-import { Triangle } from './Rendering/Geometry'
+import { ILookAtCamera } from './Rendering/Camera'
 import { parseOBJ } from './Parsers/OBJ'
 import { V3, M4, lookAt, perspective } from './Matrix'
 
-// TODO: this should take a camera as argument.
-function drawRenderable (gl: WebGLRenderingContext, r: IRenderable) {
+function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, r: IRenderable) {
   const { program, attributes, uniforms, geometry } = r.mesh
-  const up = V3(0, 1, 0)
-  const center = r.position
-  const eye = V3(0, 1, 5)
-  const view = lookAt(M4(), eye, center, up)
-  const vfovy = Math.PI / 4 
-  const aspectRatio = c.width / c.height //TODO: 'c' IS A GLOBAL VAR!
-  const near = 0.1
-  const far = 10000
-  const projection = perspective(M4(), vfovy, aspectRatio, near, far)
 
   gl.useProgram(program)
 
@@ -34,8 +24,8 @@ function drawRenderable (gl: WebGLRenderingContext, r: IRenderable) {
   gl.uniform3f(uniforms.u_position, r.position[0], r.position[1], r.position[2])
   gl.uniform3f(uniforms.u_rotation, r.rotation[0], r.rotation[1], r.rotation[2])
   gl.uniform3f(uniforms.u_scale, r.scale[0], r.scale[1], r.scale[2])
-  gl.uniformMatrix4fv(uniforms.u_view, false, view)
-  gl.uniformMatrix4fv(uniforms.u_projection, false, projection)
+  gl.uniformMatrix4fv(uniforms.u_view, false, cam.view)
+  gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection)
   gl.drawElements(gl.TRIANGLE_FAN, geometry.indices.length, gl.UNSIGNED_SHORT, 0)
 }
 
@@ -80,16 +70,31 @@ if ( p.success ) {
         indices: gl.createBuffer() as WebGLBuffer
       }
     }
+    const cam = {
+      position: new Float32Array([ 0, 1, 5 ]),
+      view: M4(),
+      projection: M4(),
+      vfov: Math.PI / 4,
+      aspectRatio: c.width / c.height,
+      near: 0.1,
+      far: 10000,
+      up: V3(0, 1, 0),
+      at: V3(0, 0, 0)
+    }
 
     requestAnimationFrame(function render () {
       const t = now()
 
       entity.rotation[1] = Math.cos(t / 5000) * Math.PI * 2
 
+      cam.aspectRatio = c.width / c.height
+      lookAt(cam.view, cam.position, cam.at, cam.up)
+      perspective(cam.projection, cam.vfov, cam.aspectRatio, cam.near, cam.far)
+
       gl.viewport(0, 0, c.width, c.height)
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-      drawRenderable(gl, entity)
+      drawRenderable(gl, cam, entity)
       requestAnimationFrame(render)
     })
   })
