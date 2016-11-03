@@ -57,6 +57,97 @@ export function translate (out: Mat4, v: Vec3): Mat4 {
   return out
 }
 
+export function rotateX (out: Mat4, rad: number): Mat4 {
+    var s = Math.sin(rad),
+        c = Math.cos(rad),
+        a10 = out[4],
+        a11 = out[5],
+        a12 = out[6],
+        a13 = out[7],
+        a20 = out[8],
+        a21 = out[9],
+        a22 = out[10],
+        a23 = out[11]
+
+    out[4] = a10 * c + a20 * s
+    out[5] = a11 * c + a21 * s
+    out[6] = a12 * c + a22 * s
+    out[7] = a13 * c + a23 * s
+    out[8] = a20 * c - a10 * s
+    out[9] = a21 * c - a11 * s
+    out[10] = a22 * c - a12 * s
+    out[11] = a23 * c - a13 * s
+    return out
+}
+
+export function rotateY (out: Mat4, rad: number): Mat4 {
+    var s = Math.sin(rad),
+        c = Math.cos(rad),
+        a00 = out[0],
+        a01 = out[1],
+        a02 = out[2],
+        a03 = out[3],
+        a20 = out[8],
+        a21 = out[9],
+        a22 = out[10],
+        a23 = out[11];
+
+    out[0] = a00 * c - a20 * s
+    out[1] = a01 * c - a21 * s
+    out[2] = a02 * c - a22 * s
+    out[3] = a03 * c - a23 * s
+    out[8] = a00 * s + a20 * c
+    out[9] = a01 * s + a21 * c
+    out[10] = a02 * s + a22 * c
+    out[11] = a03 * s + a23 * c
+    return out
+}
+
+export function rotateZ(out: Mat4, rad: number): Mat4 {
+    var s = Math.sin(rad),
+        c = Math.cos(rad),
+        a00 = out[0],
+        a01 = out[1],
+        a02 = out[2],
+        a03 = out[3],
+        a10 = out[4],
+        a11 = out[5],
+        a12 = out[6],
+        a13 = out[7]
+
+    out[0] = a00 * c + a10 * s
+    out[1] = a01 * c + a11 * s
+    out[2] = a02 * c + a12 * s
+    out[3] = a03 * c + a13 * s
+    out[4] = a10 * c - a00 * s
+    out[5] = a11 * c - a01 * s
+    out[6] = a12 * c - a02 * s
+    out[7] = a13 * c - a03 * s
+    return out
+}
+
+export function scale (out: Mat4, v: Vec3) {
+    var x = v[0], y = v[1], z = v[2]
+
+    out[0] = out[0] * x
+    out[1] = out[1] * x
+    out[2] = out[2] * x
+    out[3] = out[3] * x
+    out[4] = out[4] * y
+    out[5] = out[5] * y
+    out[6] = out[6] * y
+    out[7] = out[7] * y
+    out[8] = out[8] * z
+    out[9] = out[9] * z
+    out[10] = out[10] * z
+    out[11] = out[11] * z
+    out[12] = out[12]
+    out[13] = out[13]
+    out[14] = out[14]
+    out[15] = out[15]
+    return out
+}
+
 export function fromRotationTranslation (out: Mat4, q: Quat, v: Vec3) {
   var x = q[0], y = q[1], z = q[2], w = q[3],
       x2 = x + x,

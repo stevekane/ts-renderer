@@ -5,10 +5,9 @@ export interface IMesh {
   program: WebGLProgram
   uniforms: {
     u_time: WebGLUniformLocation,
-    u_position: WebGLUniformLocation,
-    u_scale: WebGLUniformLocation, 
-    u_rotation: WebGLUniformLocation,
-    u_view: WebGLUniformLocation
+    u_light: WebGLUniformLocation,
+    u_model: WebGLUniformLocation,
+    u_view: WebGLUniformLocation,
     u_projection: WebGLUniformLocation
   }
   attributes: {

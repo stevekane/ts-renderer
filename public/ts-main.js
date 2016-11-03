@@ -111,6 +111,66 @@ function translate(out, v) {
     return out;
 }
 exports.translate = translate;
+function rotateX(out, rad) {
+    var s = Math.sin(rad), c = Math.cos(rad), a10 = out[4], a11 = out[5], a12 = out[6], a13 = out[7], a20 = out[8], a21 = out[9], a22 = out[10], a23 = out[11];
+    out[4] = a10 * c + a20 * s;
+    out[5] = a11 * c + a21 * s;
+    out[6] = a12 * c + a22 * s;
+    out[7] = a13 * c + a23 * s;
+    out[8] = a20 * c - a10 * s;
+    out[9] = a21 * c - a11 * s;
+    out[10] = a22 * c - a12 * s;
+    out[11] = a23 * c - a13 * s;
+    return out;
+}
+exports.rotateX = rotateX;
+function rotateY(out, rad) {
+    var s = Math.sin(rad), c = Math.cos(rad), a00 = out[0], a01 = out[1], a02 = out[2], a03 = out[3], a20 = out[8], a21 = out[9], a22 = out[10], a23 = out[11];
+    out[0] = a00 * c - a20 * s;
+    out[1] = a01 * c - a21 * s;
+    out[2] = a02 * c - a22 * s;
+    out[3] = a03 * c - a23 * s;
+    out[8] = a00 * s + a20 * c;
+    out[9] = a01 * s + a21 * c;
+    out[10] = a02 * s + a22 * c;
+    out[11] = a03 * s + a23 * c;
+    return out;
+}
+exports.rotateY = rotateY;
+function rotateZ(out, rad) {
+    var s = Math.sin(rad), c = Math.cos(rad), a00 = out[0], a01 = out[1], a02 = out[2], a03 = out[3], a10 = out[4], a11 = out[5], a12 = out[6], a13 = out[7];
+    out[0] = a00 * c + a10 * s;
+    out[1] = a01 * c + a11 * s;
+    out[2] = a02 * c + a12 * s;
+    out[3] = a03 * c + a13 * s;
+    out[4] = a10 * c - a00 * s;
+    out[5] = a11 * c - a01 * s;
+    out[6] = a12 * c - a02 * s;
+    out[7] = a13 * c - a03 * s;
+    return out;
+}
+exports.rotateZ = rotateZ;
+function scale(out, v) {
+    var x = v[0], y = v[1], z = v[2];
+    out[0] = out[0] * x;
+    out[1] = out[1] * x;
+    out[2] = out[2] * x;
+    out[3] = out[3] * x;
+    out[4] = out[4] * y;
+    out[5] = out[5] * y;
+    out[6] = out[6] * y;
+    out[7] = out[7] * y;
+    out[8] = out[8] * z;
+    out[9] = out[9] * z;
+    out[10] = out[10] * z;
+    out[11] = out[11] * z;
+    out[12] = out[12];
+    out[13] = out[13];
+    out[14] = out[14];
+    out[15] = out[15];
+    return out;
+}
+exports.scale = scale;
 function fromRotationTranslation(out, q, v) {
     var x = q[0], y = q[1], z = q[2], w = q[3], x2 = x + x, y2 = y + y, z2 = z + z, xx = x * x2, xy = x * y2, xz = x * z2, yy = y * y2, yz = y * z2, zz = z * z2, wx = w * x2, wy = w * y2, wz = w * z2;
     out[0] = 1 - (yy + zz);
@@ -582,52 +642,37 @@ exports.is = is;
 
 },{}],9:[function(require,module,exports){
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = `
-precision mediump float; 
-
-uniform float u_time;
-uniform vec3 u_position;
-uniform vec3 u_scale;
-uniform vec3 u_rotation;
-
-const vec4 color = vec4(1.0, 0.5, 0.25, 1.0);
-
-void main () { 
-  vec4 t_color = vec4(color);
-
-  t_color[0] = sin(u_time / 1000.0);
-  gl_FragColor = t_color; 
-}
-`;
-
-},{}],10:[function(require,module,exports){
-"use strict";
-const vsrc_1 = require('./vsrc');
-const fsrc_1 = require('./fsrc');
+const per_vertex_vsrc_1 = require('./shaders/per-vertex-vsrc');
+const per_vertex_fsrc_1 = require('./shaders/per-vertex-fsrc');
 const Load_1 = require('./Load');
 const GL_Program_1 = require('./GL-Program');
 const OBJ_1 = require('./Parsers/OBJ');
 const Matrix_1 = require('./Matrix');
-function drawRenderable(gl, cam, r) {
+function drawRenderable(gl, cam, light, r) {
     const { program, attributes, uniforms, geometry } = r.mesh;
+    const modelMatrix = r.model;
+    Matrix_1.identity(modelMatrix);
+    Matrix_1.translate(modelMatrix, r.position);
+    Matrix_1.scale(modelMatrix, r.scale);
+    Matrix_1.rotateX(modelMatrix, r.rotation[0]);
+    Matrix_1.rotateY(modelMatrix, r.rotation[1]);
+    Matrix_1.rotateZ(modelMatrix, r.rotation[2]);
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_coord);
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(attributes.a_coord, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(attributes.a_coord);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_normal)
-    // gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.DYNAMIC_DRAW)
-    // gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, 0, 0)
-    // gl.enableVertexAttribArray(attributes.a_normal)
+    gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_normal);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(attributes.a_normal);
     // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_texCoord)
     // gl.bufferData(gl.ARRAY_BUFFER, geometry.texCoords, gl.DYNAMIC_DRAW)
     // gl.vertexAttribPointer(attributes.a_texCoord, 2, gl.FLOAT, false, 0, 0)
     // gl.enableVertexAttribArray(attributes.a_texCoord)
     gl.uniform1f(uniforms.u_time, now());
-    gl.uniform3f(uniforms.u_position, r.position[0], r.position[1], r.position[2]);
-    gl.uniform3f(uniforms.u_rotation, r.rotation[0], r.rotation[1], r.rotation[2]);
-    gl.uniform3f(uniforms.u_scale, r.scale[0], r.scale[1], r.scale[2]);
+    gl.uniform3f(uniforms.u_light, light[0], light[1], light[2]);
+    gl.uniformMatrix4fv(uniforms.u_model, false, modelMatrix);
     gl.uniformMatrix4fv(uniforms.u_view, false, cam.view);
     gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection);
     gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
@@ -635,7 +680,7 @@ function drawRenderable(gl, cam, r) {
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
-const p = GL_Program_1.fromSource(gl, vsrc_1.default, fsrc_1.default);
+const p = GL_Program_1.fromSource(gl, per_vertex_vsrc_1.default, per_vertex_fsrc_1.default);
 gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.depthFunc(gl.LEQUAL);
@@ -645,25 +690,25 @@ if (p.success) {
         .then(parsedGeometry => {
         if (!parsedGeometry.success)
             return;
-        console.log(parsedGeometry.val);
         const entity = {
-            position: new Float32Array([0, 0, 0]),
-            scale: new Float32Array([1, 1, 1]),
-            rotation: new Float32Array([0, 0, 0]),
+            position: Matrix_1.V3(0, 0, 0),
+            scale: Matrix_1.V3(1, 1, 1),
+            rotation: Matrix_1.V3(0, 0, 0),
+            model: Matrix_1.M4(),
             mesh: {
                 geometry: parsedGeometry.val,
                 program: p.value,
                 uniforms: {
                     u_time: gl.getUniformLocation(p.value, 'u_time'),
-                    u_position: gl.getUniformLocation(p.value, 'u_position'),
-                    u_scale: gl.getUniformLocation(p.value, 'u_scale'),
-                    u_rotation: gl.getUniformLocation(p.value, 'u_rotation'),
+                    u_light: gl.getUniformLocation(p.value, 'u_light'),
+                    u_model: gl.getUniformLocation(p.value, 'u_model'),
                     u_view: gl.getUniformLocation(p.value, 'u_view'),
                     u_projection: gl.getUniformLocation(p.value, 'u_projection')
                 },
                 attributes: {
                     a_coord: gl.getAttribLocation(p.value, 'a_coord'),
-                    a_normal: gl.getAttribLocation(p.value, 'a_normal')
+                    a_normal: gl.getAttribLocation(p.value, 'a_normal'),
+                    a_texCoord: gl.getAttribLocation(p.value, 'a_texCoord')
                 }
             },
             buffers: {
@@ -672,6 +717,8 @@ if (p.success) {
                 a_texCoord: gl.createBuffer()
             }
         };
+        const entities = [entity];
+        const light = Matrix_1.V3(0, 2, 0);
         const cam = {
             position: new Float32Array([0, 1, 5]),
             view: Matrix_1.M4(),
@@ -685,14 +732,19 @@ if (p.success) {
         };
         requestAnimationFrame(function render() {
             const t = now();
-            entity.rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
+            for (var i = 0; i < entities.length; i++) {
+                entities[i].rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
+            }
+            light[0] = Math.sin(t / 1000) * 4;
             cam.aspectRatio = c.width / c.height;
             Matrix_1.lookAt(cam.view, cam.position, cam.at, cam.up);
             Matrix_1.perspective(cam.projection, cam.vfov, cam.aspectRatio, cam.near, cam.far);
             gl.viewport(0, 0, c.width, c.height);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            drawRenderable(gl, cam, entity);
+            for (var j = 0; j < entities.length; j++) {
+                drawRenderable(gl, cam, light, entities[j]);
+            }
             requestAnimationFrame(render);
         });
     });
@@ -701,7 +753,25 @@ else {
     console.log(JSON.stringify(p, null, 2));
 }
 
-},{"./GL-Program":2,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./fsrc":9,"./vsrc":11}],11:[function(require,module,exports){
+},{"./GL-Program":2,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./shaders/per-vertex-fsrc":10,"./shaders/per-vertex-vsrc":11}],10:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = `
+precision mediump float; 
+
+uniform float u_time;
+uniform vec3 u_position;
+uniform vec3 u_scale;
+uniform vec3 u_rotation;
+
+varying vec4 v_color;
+
+void main () { 
+  gl_FragColor = v_color; 
+}
+`;
+
+},{}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
@@ -711,77 +781,31 @@ attribute vec3 a_coord;
 attribute vec3 a_normal;
 
 uniform float u_time;
-uniform vec3 u_position;
-uniform vec3 u_scale;
-uniform vec3 u_rotation;
+uniform vec3 u_light;
+uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 
-mat4 translate_from (vec3 v) {
-  return mat4(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    v.x, v.y, v.z, 1.0);
-}
+const vec4 COLOR_SCALE = vec4(256.0, 256.0, 256.0, 1.0);
+const vec4 rgba = vec4(218.0, 165.0, 32.0, 1.0);
+const vec4 color = rgba / COLOR_SCALE;
 
-mat4 scale_from (vec3 v) {
-  return mat4(
-    v.x, 0.0, 0.0, 0.0,
-    0.0, v.y, 0.0, 0.0,
-    0.0, 0.0, v.z, 0.0,
-    0.0, 0.0, 0.0, 1.0);
-}
-
-mat4 rotation_about_x (float zRad) {
-  float CS = cos(zRad);
-  float SN = sin(zRad);
-
-  return mat4(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, CS,  -SN, 0.0,
-    0.0, SN,  CS,  0.0,
-    0.0, 0.0, 0.0, 1.0);
-}
-
-mat4 rotation_about_y (float zRad) {
-  float CS = cos(zRad);
-  float SN = sin(zRad);
-
-  return mat4(
-    CS,  0.0, SN,  0.0,
-    0.0, 1.0, 0.0, 0.0,
-    -SN, 0.0, CS,  0.0,
-    0.0, 0.0, 0.0, 1.0);
-}
-
-mat4 rotation_about_z (float zRad) {
-  float CS = cos(zRad);
-  float SN = sin(zRad);
-
-  return mat4(
-    CS,  -SN, 0.0, 0.0,
-    SN,  CS,  0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, 0.0, 1.0);
-}
-
-mat4 model_mat (vec3 pos, vec3 scale, vec3 rot) {
-  return translate_from(pos) *
-         scale_from(scale) *
-         rotation_about_x(rot.x) *
-         rotation_about_z(rot.z) *
-         rotation_about_y(rot.y);
-}
+varying vec4 v_color;
 
 void main () { 
-  // TODO: make this calculated in CPU program...
-  mat4 u_model = model_mat(u_position, u_scale, u_rotation);
   mat4 MVP = u_projection * u_view * u_model;
   mat4 MV = u_view * u_model;
+  vec3 MVVertex = vec3(MV * vec4(a_coord, 1.0));
+  vec3 MVNormal = vec3(MV * vec4(a_normal, 0.0));
+  vec3 light_vector = normalize(u_light - MVVertex);
+  float distance = length(u_light - MVVertex);
+  float falloff = 0.05;
+  float attenuation = 1.0 / (1.0 + (falloff * distance * distance));
+  float diffuse = max(dot(MVNormal, light_vector), 0.1) * attenuation;
 
+  v_color = color * diffuse;
   gl_Position = MVP * vec4(a_coord, 1.0);
 }
 `;
 
-},{}]},{},[10]);
+},{}]},{},[9]);
