@@ -13,5 +13,6 @@ export interface IMesh {
   }
   attributes: {
     a_coord: number
+    a_normal: number
   }
 }

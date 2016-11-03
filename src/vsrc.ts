@@ -3,6 +3,7 @@ export default
 precision mediump float;
 
 attribute vec3 a_coord; 
+attribute vec3 a_normal;
 
 uniform float u_time;
 uniform vec3 u_position;
@@ -69,10 +70,11 @@ mat4 model_mat (vec3 pos, vec3 scale, vec3 rot) {
 }
 
 void main () { 
-  gl_Position 
-    = u_projection 
-    * u_view 
-    * model_mat(u_position, u_scale, u_rotation)
-    * vec4(a_coord, 1.0); 
+  // TODO: make this calculated in CPU program...
+  mat4 u_model = model_mat(u_position, u_scale, u_rotation);
+  mat4 MVP = u_projection * u_view * u_model;
+  mat4 MV = u_view * u_model;
+
+  gl_Position = MVP * vec4(a_coord, 1.0);
 }
 `

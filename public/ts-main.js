@@ -290,35 +290,39 @@ function linesToGeometry(lines) {
     const pVertices = [];
     const pNormals = [];
     const pTexCoords = [];
-    const vertices = [];
-    const normals = [];
-    const texCoords = [];
-    const indices = [];
-    console.log('hi');
-    for (const l of lines) {
+    const pFaces = [];
+    for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];
         if (l.kind === 'Vertex')
-            vertices.push(l.value[0], l.value[1], l.value[2]);
+            pVertices.push(l.value);
         else if (l.kind === 'Normal')
             pNormals.push(l.value);
         else if (l.kind === 'TexCoord')
-            pTexCoords.push(l.value);
-        else if (l.kind === 'Face') {
-            for (const fv of l.value) {
-                // TODO: normals and texCoords are not handled correctly yet. just ignored
-                // by shader atm
-                normals.push(...(fv.vn != null ? pNormals[fv.vn - 1] : [0, 0, 1]));
-                texCoords.push(...(fv.vt != null ? pTexCoords[fv.vt - 1] : [0, 0, 0]));
-                indices.push(fv.v - 1);
-            }
-        }
+            pNormals.push(l.value);
+        else if (l.kind === 'Face')
+            pFaces.push(...l.value);
         else { }
     }
-    return {
-        indices: new Uint16Array(indices),
-        vertices: new Float32Array(vertices),
-        // texCoords: new Float32Array(texCoords), TODO: Not on IGeometry yet
-        normals: new Float32Array(normals)
-    };
+    const vertices = new Float32Array(pFaces.length * 3);
+    const normals = new Float32Array(pFaces.length * 3);
+    const texCoords = new Float32Array(pFaces.length * 2);
+    const defaultNormal = [0, 0, 1];
+    const defaultTexCoord = [0, 0];
+    for (var i = 0; i < pFaces.length; i++) {
+        var { v, vt, vn } = pFaces[i];
+        var vert = pVertices[v - 1];
+        var normal = vn != null ? pNormals[vn - 1] : defaultNormal;
+        var texCoord = vt != null ? pTexCoords[vt - 1] : defaultTexCoord;
+        vertices[i * 3] = vert[0];
+        vertices[i * 3 + 1] = vert[1];
+        vertices[i * 3 + 2] = vert[2];
+        normals[i * 3] = normal[0];
+        normals[i * 3 + 1] = normal[1];
+        normals[i * 3 + 2] = normal[2];
+        texCoords[i * 2] = texCoord[0];
+        texCoords[i * 2 + 1] = texCoord[1];
+    }
+    return { vertices, normals, texCoords };
 }
 exports.parseOBJ = Parser_1.fmap(linesToGeometry, parsers_1.interspersing(exports.line, parsers_1.many(parsers_1.newline)));
 
@@ -612,15 +616,21 @@ function drawRenderable(gl, cam, r) {
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(attributes.a_coord, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(attributes.a_coord);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, r.buffers.indices);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
+    // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_normal)
+    // gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.DYNAMIC_DRAW)
+    // gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, 0, 0)
+    // gl.enableVertexAttribArray(attributes.a_normal)
+    // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_texCoord)
+    // gl.bufferData(gl.ARRAY_BUFFER, geometry.texCoords, gl.DYNAMIC_DRAW)
+    // gl.vertexAttribPointer(attributes.a_texCoord, 2, gl.FLOAT, false, 0, 0)
+    // gl.enableVertexAttribArray(attributes.a_texCoord)
     gl.uniform1f(uniforms.u_time, now());
     gl.uniform3f(uniforms.u_position, r.position[0], r.position[1], r.position[2]);
     gl.uniform3f(uniforms.u_rotation, r.rotation[0], r.rotation[1], r.rotation[2]);
     gl.uniform3f(uniforms.u_scale, r.scale[0], r.scale[1], r.scale[2]);
     gl.uniformMatrix4fv(uniforms.u_view, false, cam.view);
     gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection);
-    gl.drawElements(gl.TRIANGLE_FAN, geometry.indices.length, gl.UNSIGNED_SHORT, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
 }
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
@@ -653,12 +663,13 @@ if (p.success) {
                 },
                 attributes: {
                     a_coord: gl.getAttribLocation(p.value, 'a_coord'),
+                    a_normal: gl.getAttribLocation(p.value, 'a_normal')
                 }
             },
             buffers: {
                 a_coord: gl.createBuffer(),
                 a_normal: gl.createBuffer(),
-                indices: gl.createBuffer()
+                a_texCoord: gl.createBuffer()
             }
         };
         const cam = {
@@ -697,6 +708,7 @@ exports.default = `
 precision mediump float;
 
 attribute vec3 a_coord; 
+attribute vec3 a_normal;
 
 uniform float u_time;
 uniform vec3 u_position;
@@ -763,11 +775,12 @@ mat4 model_mat (vec3 pos, vec3 scale, vec3 rot) {
 }
 
 void main () { 
-  gl_Position 
-    = u_projection 
-    * u_view 
-    * model_mat(u_position, u_scale, u_rotation)
-    * vec4(a_coord, 1.0); 
+  // TODO: make this calculated in CPU program...
+  mat4 u_model = model_mat(u_position, u_scale, u_rotation);
+  mat4 MVP = u_projection * u_view * u_model;
+  mat4 MV = u_view * u_model;
+
+  gl_Position = MVP * vec4(a_coord, 1.0);
 }
 `;
 

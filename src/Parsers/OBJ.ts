@@ -58,9 +58,9 @@ const anyChar = satisfy(_ => true)
 
 const faceVertex =
   lift3((v, vt, vn) => ({ v, vt, vn }),
-  spaced(integer),
-  optional(doThen(slash, optional(integer))),
-  optional(doThen(slash, integer)))
+        spaced(integer),
+        optional(doThen(slash, optional(integer))),
+        optional(doThen(slash, integer)))
 
 export const vertex: Parser<Line> =
   lift4(Vert, 
@@ -82,8 +82,7 @@ export const normal: Parser<Line> =
         spaced(real))
 
 export const face: Parser<Line> = 
-  lift(Face, 
-       doThen(match('f'), atleastN(3, spaced(faceVertex))))
+  lift(Face, doThen(match('f'), atleastN(3, spaced(faceVertex))))
 
 export const ignored: Parser<Line> =
   lift(Ignored, fmap(cs => cs.join(''), many1(anyChar)))
@@ -95,34 +94,39 @@ function linesToGeometry (lines: Line[]): IGeometry {
   const pVertices: V4[] = []
   const pNormals: V3[] = []
   const pTexCoords: V3[] = []
-  const vertices: number[] = []
-  const normals: number[] = []
-  const texCoords: number[] = []
-  const indices: number[] = []
+  const pFaces: IFaceVertex[] = []
 
-  console.log('hi')
-  for ( const l of lines ) {
-    if      ( l.kind === 'Vertex' )   vertices.push(l.value[0], l.value[1], l.value[2])
+  for ( var i = 0; i < lines.length; i++) {
+    var l = lines[i]
+
+    if      ( l.kind === 'Vertex' )   pVertices.push(l.value)
     else if ( l.kind === 'Normal' )   pNormals.push(l.value)
-    else if ( l.kind === 'TexCoord' ) pTexCoords.push(l.value)
-    else if ( l.kind === 'Face' ) {
-      for ( const fv of l.value ) {
-        // TODO: normals and texCoords are not handled correctly yet. just ignored
-        // by shader atm
-        normals.push(...(fv.vn != null ? pNormals[fv.vn - 1] : [ 0, 0, 1 ]))
-        texCoords.push(...(fv.vt != null ? pTexCoords[fv.vt - 1] : [ 0, 0, 0 ]))
-        indices.push(fv.v - 1)
-      }
-    }
+    else if ( l.kind === 'TexCoord' ) pNormals.push(l.value)
+    else if ( l.kind === 'Face' )     pFaces.push(...l.value)
     else {}
   }
-  
-  return { 
-    indices: new Uint16Array(indices),
-    vertices: new Float32Array(vertices),
-    // texCoords: new Float32Array(texCoords), TODO: Not on IGeometry yet
-    normals: new Float32Array(normals)
+  const vertices = new Float32Array(pFaces.length * 3)
+  const normals = new Float32Array(pFaces.length * 3)
+  const texCoords = new Float32Array(pFaces.length * 2)
+  const defaultNormal = [ 0, 0, 1 ]
+  const defaultTexCoord = [ 0, 0 ]
+
+  for ( var i = 0; i < pFaces.length; i++) {
+    var { v, vt, vn } = pFaces[i] 
+    var vert = pVertices[v - 1]
+    var normal = vn != null ? pNormals[vn - 1] : defaultNormal
+    var texCoord = vt != null ? pTexCoords[vt - 1] : defaultTexCoord 
+
+    vertices[i * 3]      = vert[0]
+    vertices[i * 3 + 1]  = vert[1]
+    vertices[i * 3 + 2]  = vert[2]
+    normals[i * 3]       = normal[0]
+    normals[i * 3 + 1]   = normal[1]
+    normals[i * 3 + 2]   = normal[2]
+    texCoords[i * 2]     = texCoord[0]
+    texCoords[i * 2 + 1] = texCoord[1]
   }
+  return { vertices, normals, texCoords }
 }
 
 export const parseOBJ = 

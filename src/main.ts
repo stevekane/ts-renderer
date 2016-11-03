@@ -17,8 +17,15 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, r: IRend
   gl.vertexAttribPointer(attributes.a_coord, 3, gl.FLOAT, false, 0, 0)
   gl.enableVertexAttribArray(attributes.a_coord)
 
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, r.buffers.indices)
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW)
+  // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_normal)
+  // gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.DYNAMIC_DRAW)
+  // gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, 0, 0)
+  // gl.enableVertexAttribArray(attributes.a_normal)
+
+  // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_texCoord)
+  // gl.bufferData(gl.ARRAY_BUFFER, geometry.texCoords, gl.DYNAMIC_DRAW)
+  // gl.vertexAttribPointer(attributes.a_texCoord, 2, gl.FLOAT, false, 0, 0)
+  // gl.enableVertexAttribArray(attributes.a_texCoord)
 
   gl.uniform1f(uniforms.u_time, now()) 
   gl.uniform3f(uniforms.u_position, r.position[0], r.position[1], r.position[2])
@@ -26,7 +33,8 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, r: IRend
   gl.uniform3f(uniforms.u_scale, r.scale[0], r.scale[1], r.scale[2])
   gl.uniformMatrix4fv(uniforms.u_view, false, cam.view)
   gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection)
-  gl.drawElements(gl.TRIANGLE_FAN, geometry.indices.length, gl.UNSIGNED_SHORT, 0)
+
+  gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3)
 }
 
 const now = performance ? performance.now.bind(performance) : Date.now
@@ -62,12 +70,13 @@ if ( p.success ) {
         },
         attributes: {
           a_coord: gl.getAttribLocation(p.value, 'a_coord') as number,
+          a_normal: gl.getAttribLocation(p.value, 'a_normal') as number
         }
       },
       buffers: {
         a_coord: gl.createBuffer() as WebGLBuffer,
         a_normal: gl.createBuffer() as WebGLBuffer,
-        indices: gl.createBuffer() as WebGLBuffer
+        a_texCoord: gl.createBuffer() as WebGLBuffer
       }
     }
     const cam = {
