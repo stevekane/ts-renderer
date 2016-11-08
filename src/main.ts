@@ -1,7 +1,7 @@
 import vsrc from './shaders/per-vertex-vsrc'
 import fsrc from './shaders/per-vertex-fsrc'
 import { loadXHR } from './Load'
-import { fromSource } from './GL-Program'
+import { createCommand } from './Command'
 import { IRenderable } from './Rendering/core'
 import { ILookAtCamera } from './Rendering/Camera'
 import { parseOBJ } from './Parsers/OBJ'
@@ -49,13 +49,13 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, light: V
 const now = performance ? performance.now.bind(performance) : Date.now
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
-const p = fromSource(gl, vsrc, fsrc)
+const command = createCommand(gl, { vsrc, fsrc, uniforms: {}, attributes: {} })
 
 gl.enable(gl.DEPTH_TEST)
 gl.enable(gl.CULL_FACE)
 gl.depthFunc(gl.LEQUAL)
 
-if ( p.success ) {
+if ( command.success ) {
   loadXHR('pyramid.obj')
   .then(parseOBJ)
   .then(parsedGeometry => {
@@ -68,18 +68,18 @@ if ( p.success ) {
       model: M4(),
       mesh: {
         geometry: parsedGeometry.val,
-        program: p.value,
+        program: command.value.program,
         uniforms: {
-          u_time: gl.getUniformLocation(p.value, 'u_time') as WebGLUniformLocation,
-          u_light: gl.getUniformLocation(p.value, 'u_light') as WebGLUniformLocation,
-          u_model: gl.getUniformLocation(p.value, 'u_model') as WebGLUniformLocation,
-          u_view: gl.getUniformLocation(p.value, 'u_view') as WebGLUniformLocation,
-          u_projection: gl.getUniformLocation(p.value, 'u_projection') as WebGLUniformLocation
+          u_time: gl.getUniformLocation(command.value.program, 'u_time') as WebGLUniformLocation,
+          u_light: gl.getUniformLocation(command.value.program, 'u_light') as WebGLUniformLocation,
+          u_model: gl.getUniformLocation(command.value.program, 'u_model') as WebGLUniformLocation,
+          u_view: gl.getUniformLocation(command.value.program, 'u_view') as WebGLUniformLocation,
+          u_projection: gl.getUniformLocation(command.value.program, 'u_projection') as WebGLUniformLocation
         },
         attributes: {
-          a_coord: gl.getAttribLocation(p.value, 'a_coord') as number,
-          a_normal: gl.getAttribLocation(p.value, 'a_normal') as number,
-          a_texCoord: gl.getAttribLocation(p.value, 'a_texCoord') as number
+          a_coord: gl.getAttribLocation(command.value.program, 'a_coord') as number,
+          a_normal: gl.getAttribLocation(command.value.program, 'a_normal') as number,
+          a_texCoord: gl.getAttribLocation(command.value.program, 'a_texCoord') as number
         }
       },
       buffers: {
@@ -125,5 +125,5 @@ if ( p.success ) {
     })
   })
 } else {
-  console.log(JSON.stringify(p, null, 2)) 
+  console.log(command.value.message)
 }

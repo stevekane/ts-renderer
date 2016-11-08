@@ -101,7 +101,7 @@ function linesToGeometry (lines: Line[]): IGeometry {
 
     if      ( l.kind === 'Vertex' )   pVertices.push(l.value)
     else if ( l.kind === 'Normal' )   pNormals.push(l.value)
-    else if ( l.kind === 'TexCoord' ) pNormals.push(l.value)
+    else if ( l.kind === 'TexCoord' ) pTexCoords.push(l.value)
     else if ( l.kind === 'Face' )     pFaces.push(...l.value)
     else {}
   }

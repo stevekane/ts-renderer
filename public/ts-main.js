@@ -1,5 +1,34 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
+const Either_1 = require('./Either');
+function compileShader(gl, kind, src) {
+    const shader = gl.createShader(kind);
+    const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    return shader && gl.getShaderParameter(shader, gl.COMPILE_STATUS)
+        ? new Either_1.Success(shader)
+        : new Either_1.Failure(new Error(`${kindStr}: ${gl.getShaderInfoLog(shader) || ''}`));
+}
+function linkProgram(gl, vertex, fragment) {
+    const program = gl.createProgram();
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
+    gl.linkProgram(program);
+    return program && gl.getProgramParameter(program, gl.LINK_STATUS)
+        ? new Either_1.Success(program)
+        : new Either_1.Failure(new Error(gl.getProgramInfoLog(program) || ''));
+}
+function fromSource(gl, vsrc, fsrc) {
+    return Either_1.flatMap(compileShader(gl, gl.VERTEX_SHADER, vsrc), vertex => Either_1.flatMap(compileShader(gl, gl.FRAGMENT_SHADER, fsrc), fragment => linkProgram(gl, vertex, fragment)));
+}
+function createCommand(gl, cfg) {
+    return Either_1.flatMap(fromSource(gl, cfg.vsrc, cfg.fsrc), program => new Either_1.Success({ program }));
+}
+exports.createCommand = createCommand;
+
+},{"./Either":2}],2:[function(require,module,exports){
+"use strict";
 class Success {
     constructor(value) {
         this.value = value;
@@ -14,38 +43,26 @@ class Failure {
     }
 }
 exports.Failure = Failure;
+function fmap(fn, mA) {
+    switch (mA.success) {
+        case true: return new Success(fn(mA.value));
+        case false: return new Failure(mA.value);
+    }
+}
+exports.fmap = fmap;
+function flatMap(mA, fn) {
+    switch (mA.success) {
+        case true: return fn(mA.value);
+        case false: return new Failure(mA.value);
+    }
+}
+exports.flatMap = flatMap;
+function unit(a) {
+    return new Success(a);
+}
+exports.unit = unit;
 
-},{}],2:[function(require,module,exports){
-"use strict";
-const Either_1 = require('./Either');
-function compileShader(gl, kind, src) {
-    const shader = gl.createShader(kind);
-    gl.shaderSource(shader, src);
-    gl.compileShader(shader);
-    return shader && gl.getShaderParameter(shader, gl.COMPILE_STATUS)
-        ? new Either_1.Success(shader)
-        : new Either_1.Failure({ src, log: gl.getShaderInfoLog(shader) || '' });
-}
-function linkProgram(gl, vertex, fragment) {
-    const program = gl.createProgram();
-    if (vertex.success)
-        gl.attachShader(program, vertex.value);
-    if (fragment.success)
-        gl.attachShader(program, fragment.value);
-    gl.linkProgram(program);
-    const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-    const numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
-    const log = gl.getProgramInfoLog(program) || '';
-    return program && gl.getProgramParameter(program, gl.LINK_STATUS)
-        ? new Either_1.Success(program)
-        : new Either_1.Failure({ fragment, vertex, log });
-}
-function fromSource(gl, vsrc, fsrc) {
-    return linkProgram(gl, compileShader(gl, gl.VERTEX_SHADER, vsrc), compileShader(gl, gl.FRAGMENT_SHADER, fsrc));
-}
-exports.fromSource = fromSource;
-
-},{"./Either":1}],3:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 "use strict";
 function loadXHR(uri) {
     return new Promise((res, rej) => {
@@ -358,7 +375,7 @@ function linesToGeometry(lines) {
         else if (l.kind === 'Normal')
             pNormals.push(l.value);
         else if (l.kind === 'TexCoord')
-            pNormals.push(l.value);
+            pTexCoords.push(l.value);
         else if (l.kind === 'Face')
             pFaces.push(...l.value);
         else { }
@@ -645,7 +662,7 @@ exports.is = is;
 const per_vertex_vsrc_1 = require('./shaders/per-vertex-vsrc');
 const per_vertex_fsrc_1 = require('./shaders/per-vertex-fsrc');
 const Load_1 = require('./Load');
-const GL_Program_1 = require('./GL-Program');
+const Command_1 = require('./Command');
 const OBJ_1 = require('./Parsers/OBJ');
 const Matrix_1 = require('./Matrix');
 function drawRenderable(gl, cam, light, r) {
@@ -680,11 +697,11 @@ function drawRenderable(gl, cam, light, r) {
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
-const p = GL_Program_1.fromSource(gl, per_vertex_vsrc_1.default, per_vertex_fsrc_1.default);
+const command = Command_1.createCommand(gl, { vsrc: per_vertex_vsrc_1.default, fsrc: per_vertex_fsrc_1.default, uniforms: {}, attributes: {} });
 gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.depthFunc(gl.LEQUAL);
-if (p.success) {
+if (command.success) {
     Load_1.loadXHR('pyramid.obj')
         .then(OBJ_1.parseOBJ)
         .then(parsedGeometry => {
@@ -697,18 +714,18 @@ if (p.success) {
             model: Matrix_1.M4(),
             mesh: {
                 geometry: parsedGeometry.val,
-                program: p.value,
+                program: command.value.program,
                 uniforms: {
-                    u_time: gl.getUniformLocation(p.value, 'u_time'),
-                    u_light: gl.getUniformLocation(p.value, 'u_light'),
-                    u_model: gl.getUniformLocation(p.value, 'u_model'),
-                    u_view: gl.getUniformLocation(p.value, 'u_view'),
-                    u_projection: gl.getUniformLocation(p.value, 'u_projection')
+                    u_time: gl.getUniformLocation(command.value.program, 'u_time'),
+                    u_light: gl.getUniformLocation(command.value.program, 'u_light'),
+                    u_model: gl.getUniformLocation(command.value.program, 'u_model'),
+                    u_view: gl.getUniformLocation(command.value.program, 'u_view'),
+                    u_projection: gl.getUniformLocation(command.value.program, 'u_projection')
                 },
                 attributes: {
-                    a_coord: gl.getAttribLocation(p.value, 'a_coord'),
-                    a_normal: gl.getAttribLocation(p.value, 'a_normal'),
-                    a_texCoord: gl.getAttribLocation(p.value, 'a_texCoord')
+                    a_coord: gl.getAttribLocation(command.value.program, 'a_coord'),
+                    a_normal: gl.getAttribLocation(command.value.program, 'a_normal'),
+                    a_texCoord: gl.getAttribLocation(command.value.program, 'a_texCoord')
                 }
             },
             buffers: {
@@ -750,10 +767,10 @@ if (p.success) {
     });
 }
 else {
-    console.log(JSON.stringify(p, null, 2));
+    console.log(command.value.message);
 }
 
-},{"./GL-Program":2,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./shaders/per-vertex-fsrc":10,"./shaders/per-vertex-vsrc":11}],10:[function(require,module,exports){
+},{"./Command":1,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./shaders/per-vertex-fsrc":10,"./shaders/per-vertex-vsrc":11}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
