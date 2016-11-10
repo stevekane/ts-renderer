@@ -23,9 +23,10 @@
   },
   "homepage": "https://github.com/stevekane/spinning-cube#readme",
   "devDependencies": {
+    "browserify": "^13.1.1",
     "tape": "^4.6.2",
     "tsify": "^2.0.2",
-    "typescript": "^2.0.3"
+    "typescript": "^2.1.0-dev.20161108"
   },
   "dependencies": {}
 }

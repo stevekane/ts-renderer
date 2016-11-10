@@ -20,6 +20,11 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, light: V
   rotateX(modelMatrix, r.rotation[0])
   rotateY(modelMatrix, r.rotation[1])
   rotateZ(modelMatrix, r.rotation[2])
+
+  // All GL State setup and a single function call below here:
+  gl.enable(gl.DEPTH_TEST)
+  gl.enable(gl.CULL_FACE)
+  gl.depthFunc(gl.LEQUAL)
   gl.useProgram(program)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_coord)
@@ -49,11 +54,20 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, light: V
 const now = performance ? performance.now.bind(performance) : Date.now
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
-const command = createCommand(gl, { vsrc, fsrc, uniforms: {}, attributes: {} })
+const command = createCommand(gl, {
+  vsrc,
+  fsrc,
+  uniforms: {
+    u_time: { type: '1f', val: 0 },
+    u_light: { type: '3f', x: 0, y: 0, z: 0 },
+    u_model: { type: 'matrix4fv', buffer: M4() },
+    u_view: { type: 'matrix4fv', buffer: M4() },
+    u_projection: { type: 'matrix4fv', buffer: M4() }
+  },
+  attributes: {}
+})
 
-gl.enable(gl.DEPTH_TEST)
-gl.enable(gl.CULL_FACE)
-gl.depthFunc(gl.LEQUAL)
+console.log(command)
 
 if ( command.success ) {
   loadXHR('pyramid.obj')
@@ -125,5 +139,5 @@ if ( command.success ) {
     })
   })
 } else {
-  console.log(command.value.message)
+  console.log(command.value)
 }

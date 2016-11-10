@@ -1,6 +1,25 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
-const Either_1 = require('./Either');
+const Either_1 = require("./Either");
+var GL_TYPE;
+(function (GL_TYPE) {
+    GL_TYPE[GL_TYPE["BYTE"] = 0] = "BYTE";
+    GL_TYPE[GL_TYPE["U_BYTE"] = 1] = "U_BYTE";
+    GL_TYPE[GL_TYPE["SHORT"] = 2] = "SHORT";
+    GL_TYPE[GL_TYPE["U_SHORT"] = 3] = "U_SHORT";
+    GL_TYPE[GL_TYPE["FLOAT"] = 4] = "FLOAT";
+})(GL_TYPE = exports.GL_TYPE || (exports.GL_TYPE = {}));
+function createCommand(gl, { vsrc, fsrc, uniforms }) {
+    const p = fromSource(gl, vsrc, fsrc);
+    const u = setupUniforms(gl, uniforms);
+    return p.success && u.success
+        ? new Either_1.Success({ program: p.value, uniforms, uniformLocations: u.value })
+        : new Either_1.Failure('No');
+}
+exports.createCommand = createCommand;
+function setupUniforms(gl, uniforms) {
+    return new Either_1.Success({});
+}
 function compileShader(gl, kind, src) {
     const shader = gl.createShader(kind);
     const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
@@ -8,7 +27,7 @@ function compileShader(gl, kind, src) {
     gl.compileShader(shader);
     return shader && gl.getShaderParameter(shader, gl.COMPILE_STATUS)
         ? new Either_1.Success(shader)
-        : new Either_1.Failure(new Error(`${kindStr}: ${gl.getShaderInfoLog(shader) || ''}`));
+        : new Either_1.Failure(`${kindStr}: ${gl.getShaderInfoLog(shader) || ''}`);
 }
 function linkProgram(gl, vertex, fragment) {
     const program = gl.createProgram();
@@ -17,15 +36,11 @@ function linkProgram(gl, vertex, fragment) {
     gl.linkProgram(program);
     return program && gl.getProgramParameter(program, gl.LINK_STATUS)
         ? new Either_1.Success(program)
-        : new Either_1.Failure(new Error(gl.getProgramInfoLog(program) || ''));
+        : new Either_1.Failure(gl.getProgramInfoLog(program) || '');
 }
 function fromSource(gl, vsrc, fsrc) {
     return Either_1.flatMap(compileShader(gl, gl.VERTEX_SHADER, vsrc), vertex => Either_1.flatMap(compileShader(gl, gl.FRAGMENT_SHADER, fsrc), fragment => linkProgram(gl, vertex, fragment)));
 }
-function createCommand(gl, cfg) {
-    return Either_1.flatMap(fromSource(gl, cfg.vsrc, cfg.fsrc), program => new Either_1.Success({ program }));
-}
-exports.createCommand = createCommand;
 
 },{"./Either":2}],2:[function(require,module,exports){
 "use strict";
@@ -331,8 +346,8 @@ exports.perspective = perspective;
 
 },{}],5:[function(require,module,exports){
 "use strict";
-const Parser_1 = require('./Parser');
-const parsers_1 = require('./parsers');
+const Parser_1 = require("./Parser");
+const parsers_1 = require("./parsers");
 exports.Vert = (x, y, z, w) => ({
     kind: 'Vertex',
     value: [x, y, z, w]
@@ -470,8 +485,8 @@ exports.doThen = doThen;
 
 },{}],7:[function(require,module,exports){
 "use strict";
-const predicates_1 = require('./predicates');
-const Parser_1 = require('./Parser');
+const predicates_1 = require("./predicates");
+const Parser_1 = require("./Parser");
 function satisfy(f) {
     return function (str) {
         if (str.length === 0)
@@ -628,12 +643,14 @@ exports.spaces = consume(n => n === ' ');
 exports.newline = anyOf([exactly('\n'), exactly('\f'), match('\r\n'), exactly('\r')]);
 exports.integer = Parser_1.fmap(Number, concat([
     orDefault(exports.dash, ''),
-    consumeAtleastN(1, predicates_1.isNumber)]));
+    consumeAtleastN(1, predicates_1.isNumber)
+]));
 exports.real = Parser_1.fmap(Number, concat([
     orDefault(exports.dash, ''),
     consumeAtleastN(1, predicates_1.isNumber),
     exports.dot,
-    consumeAtleastN(1, predicates_1.isNumber)]));
+    consumeAtleastN(1, predicates_1.isNumber)
+]));
 
 },{"./Parser":6,"./predicates":8}],8:[function(require,module,exports){
 "use strict";
@@ -659,12 +676,12 @@ exports.is = is;
 
 },{}],9:[function(require,module,exports){
 "use strict";
-const per_vertex_vsrc_1 = require('./shaders/per-vertex-vsrc');
-const per_vertex_fsrc_1 = require('./shaders/per-vertex-fsrc');
-const Load_1 = require('./Load');
-const Command_1 = require('./Command');
-const OBJ_1 = require('./Parsers/OBJ');
-const Matrix_1 = require('./Matrix');
+const per_vertex_vsrc_1 = require("./shaders/per-vertex-vsrc");
+const per_vertex_fsrc_1 = require("./shaders/per-vertex-fsrc");
+const Load_1 = require("./Load");
+const Command_1 = require("./Command");
+const OBJ_1 = require("./Parsers/OBJ");
+const Matrix_1 = require("./Matrix");
 function drawRenderable(gl, cam, light, r) {
     const { program, attributes, uniforms, geometry } = r.mesh;
     const modelMatrix = r.model;
@@ -674,6 +691,10 @@ function drawRenderable(gl, cam, light, r) {
     Matrix_1.rotateX(modelMatrix, r.rotation[0]);
     Matrix_1.rotateY(modelMatrix, r.rotation[1]);
     Matrix_1.rotateZ(modelMatrix, r.rotation[2]);
+    // All GL State setup and a single function call below here:
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.depthFunc(gl.LEQUAL);
     gl.useProgram(program);
     gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_coord);
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
@@ -697,10 +718,19 @@ function drawRenderable(gl, cam, light, r) {
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
-const command = Command_1.createCommand(gl, { vsrc: per_vertex_vsrc_1.default, fsrc: per_vertex_fsrc_1.default, uniforms: {}, attributes: {} });
-gl.enable(gl.DEPTH_TEST);
-gl.enable(gl.CULL_FACE);
-gl.depthFunc(gl.LEQUAL);
+const command = Command_1.createCommand(gl, {
+    vsrc: per_vertex_vsrc_1.default,
+    fsrc: per_vertex_fsrc_1.default,
+    uniforms: {
+        u_time: { type: '1f', val: 0 },
+        u_light: { type: '3f', x: 0, y: 0, z: 0 },
+        u_model: { type: 'matrix4fv', buffer: Matrix_1.M4() },
+        u_view: { type: 'matrix4fv', buffer: Matrix_1.M4() },
+        u_projection: { type: 'matrix4fv', buffer: Matrix_1.M4() }
+    },
+    attributes: {}
+});
+console.log(command);
 if (command.success) {
     Load_1.loadXHR('pyramid.obj')
         .then(OBJ_1.parseOBJ)
@@ -767,7 +797,7 @@ if (command.success) {
     });
 }
 else {
-    console.log(command.value.message);
+    console.log(command.value);
 }
 
 },{"./Command":1,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./shaders/per-vertex-fsrc":10,"./shaders/per-vertex-vsrc":11}],10:[function(require,module,exports){
