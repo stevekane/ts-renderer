@@ -32,10 +32,11 @@ var UNIFORM_TYPE;
     UNIFORM_TYPE[UNIFORM_TYPE["matrix4fv"] = 18] = "matrix4fv";
 })(UNIFORM_TYPE = exports.UNIFORM_TYPE || (exports.UNIFORM_TYPE = {}));
 function createCommand(gl, cfg) {
-    const { uniforms, vsrc, fsrc } = cfg;
-    return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(setupAttributes(gl, program, cfg.attributes), attributes => {
-        setUniforms(gl, program, uniformLocations, uniforms);
-        return new Either_1.Success({ program, uniforms, uniformLocations, attributes });
+    const { uniforms, attributes, vsrc, fsrc } = cfg;
+    return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), activeUniforms => Either_1.flatMap(setupAttributes(gl, program, attributes), activeAttributes => {
+        setUniforms(gl, program, activeUniforms, uniforms);
+        setAttributes(gl, program, activeAttributes, attributes);
+        return new Either_1.Success({ program, uniforms, attributes, activeUniforms, activeAttributes });
     })));
 }
 exports.createCommand = createCommand;
@@ -46,14 +47,43 @@ function setupUniforms(gl, program, uniforms) {
         const loc = gl.getUniformLocation(program, name);
         if (loc == null)
             return new Either_1.Failure(`Could not find location for ${name}`);
-        out[name] = loc;
+        out[name] = { loc };
+    }
+    return new Either_1.Success(out);
+}
+function setupAttributes(gl, program, attributes) {
+    const out = {};
+    for (const name in attributes) {
+        const { kind, size, offset, stride } = attributes[name];
+        const loc = gl.getAttribLocation(program, name);
+        if (loc == null)
+            return new Either_1.Failure(`Could not find attrib ${name}`);
+        const buffer = gl.createBuffer();
+        if (buffer == null)
+            return new Either_1.Failure('Could not create buffer');
+        var glType;
+        if (kind == ATTRIBUTE_TYPE.BYTE)
+            glType = gl.BYTE;
+        else if (kind == ATTRIBUTE_TYPE.U_BYTE)
+            glType = gl.UNSIGNED_BYTE;
+        else if (kind == ATTRIBUTE_TYPE.SHORT)
+            glType = gl.SHORT;
+        else if (kind == ATTRIBUTE_TYPE.U_SHORT)
+            glType = gl.UNSIGNED_SHORT;
+        else
+            glType = gl.FLOAT;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0);
+        gl.enableVertexAttribArray(loc);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        out[name] = { loc, buffer };
     }
     return new Either_1.Success(out);
 }
 function setUniforms(gl, program, activeUniforms, uniforms) {
     for (const key in uniforms) {
         const uniform = uniforms[key];
-        const loc = activeUniforms[key];
+        const { loc } = activeUniforms[key];
         switch (uniform.kind) {
             case UNIFORM_TYPE.f1:
                 gl.uniform1f(loc, uniform.value);
@@ -115,35 +145,14 @@ function setUniforms(gl, program, activeUniforms, uniforms) {
         }
     }
 }
-function setupAttributes(gl, program, attributes) {
-    const out = {};
+function setAttributes(gl, program, activeAttributes, attributes) {
     for (const name in attributes) {
-        const { kind, value, size, offset, stride } = attributes[name];
-        const loc = gl.getAttribLocation(program, name);
-        if (loc == null)
-            return new Either_1.Failure(`Could not find attrib ${name}`);
-        const buffer = gl.createBuffer();
-        if (buffer == null)
-            return new Either_1.Failure('Could not create buffer');
+        const { value } = attributes[name];
+        const { buffer } = activeAttributes[name];
         const content = value instanceof Float32Array ? value : new Float32Array(value);
-        var glType;
-        if (kind == ATTRIBUTE_TYPE.BYTE)
-            glType = gl.BYTE;
-        else if (kind == ATTRIBUTE_TYPE.U_BYTE)
-            glType = gl.UNSIGNED_BYTE;
-        else if (kind == ATTRIBUTE_TYPE.SHORT)
-            glType = gl.SHORT;
-        else if (kind == ATTRIBUTE_TYPE.U_SHORT)
-            glType = gl.UNSIGNED_SHORT;
-        else
-            glType = gl.FLOAT;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0);
-        gl.enableVertexAttribArray(loc);
-        out[name] = { kind, value, size, offset, stride, loc, buffer };
     }
-    return new Either_1.Success(out);
 }
 function compileShader(gl, kind, src) {
     const shader = gl.createShader(kind);

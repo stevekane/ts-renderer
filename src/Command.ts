@@ -2,10 +2,13 @@ import { Either, fmap, flatMap, Success, Failure, unit } from './Either'
 
 type GL = WebGLRenderingContext
 
-export type ActiveUniforms = Block<WebGLUniformLocation>
-export type ActiveAttributes = Block<ActiveAttribute>
 export type Block<T> = { [ name: string ]: T }
 export type ShaderSrc = string
+export type Uniforms = Block<Uniform>
+export type Attributes = Block<Attribute>
+export type ActiveUniforms = Block<ActiveUniform>
+export type ActiveAttributes = Block<ActiveAttribute>
+
 export type ATTRIBUTE_SIZE = 1 | 2 | 3 | 4
 export enum ATTRIBUTE_TYPE { BYTE, U_BYTE, SHORT, U_SHORT, FLOAT }
 export enum UNIFORM_TYPE {
@@ -37,6 +40,10 @@ export type Uniform
   | { kind: UNIFORM_TYPE.matrix3fv, matrices: number[] | Float32Array }
   | { kind: UNIFORM_TYPE.matrix4fv, matrices: number[] | Float32Array }
 
+export interface ActiveUniform {
+  loc: WebGLUniformLocation
+}
+
 export interface Attribute { 
   kind: ATTRIBUTE_TYPE, 
   value: ArrayLike<number>
@@ -45,7 +52,7 @@ export interface Attribute {
   stride?: number,
 }
 
-export interface ActiveAttribute extends Attribute {
+export interface ActiveAttribute {
   loc: number
   buffer: WebGLBuffer
 }
@@ -59,30 +66,62 @@ export interface Config {
 
 export interface Command {
   program: WebGLProgram
-  uniforms: Block<Uniform>
-  uniformLocations: Block<WebGLUniformLocation>
-  attributes: Block<ActiveAttribute>
+  uniforms: Uniforms 
+  attributes: Attributes
+  activeUniforms: ActiveUniforms 
+  activeAttributes: ActiveAttributes
 }
 
 export function createCommand<I extends Config> (gl: GL, cfg: I): Either<Command> {
-  const { uniforms, vsrc, fsrc } = cfg
+  const { uniforms, attributes, vsrc, fsrc } = cfg
 
   return flatMap(fromSource(gl, vsrc, fsrc),                    program => 
-         flatMap(setupUniforms(gl, program, uniforms),          uniformLocations => 
-         flatMap(setupAttributes(gl, program, cfg.attributes),  attributes => {
-           setUniforms(gl, program, uniformLocations, uniforms)
-           return new Success({ program, uniforms, uniformLocations, attributes })})))
+         flatMap(setupUniforms(gl, program, uniforms),          activeUniforms => 
+         flatMap(setupAttributes(gl, program, attributes),      activeAttributes => {
+           setUniforms(gl, program, activeUniforms, uniforms)
+           setAttributes(gl, program, activeAttributes, attributes)
+           return new Success({ program, uniforms, attributes, activeUniforms, activeAttributes })})))
 }
 
 function setupUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>): Either<ActiveUniforms> {
-  const out: Block<WebGLUniformLocation> = {}
+  const out: ActiveUniforms = {}
 
   for ( const name in uniforms ) {
     const uniform = uniforms[name]
     const loc = gl.getUniformLocation(program, name) 
 
     if ( loc == null ) return new Failure(`Could not find location for ${ name }`)
-    out[name] = loc
+    out[name] = { loc }
+  }
+  return new Success(out)
+}
+
+function setupAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attribute>): Either<ActiveAttributes> {
+  const out: ActiveAttributes = {}
+
+  for ( const name in attributes ) {
+    const { kind, size, offset, stride } = attributes[name]
+    const loc = gl.getAttribLocation(program, name) 
+
+    if ( loc == null ) return new Failure(`Could not find attrib ${ name }`)
+
+    const buffer = gl.createBuffer()
+
+    if ( buffer == null ) return new Failure('Could not create buffer')
+
+    var glType: number
+    if      ( kind == ATTRIBUTE_TYPE.BYTE )    glType = gl.BYTE
+    else if ( kind == ATTRIBUTE_TYPE.U_BYTE )  glType = gl.UNSIGNED_BYTE
+    else if ( kind == ATTRIBUTE_TYPE.SHORT )   glType = gl.SHORT
+    else if ( kind == ATTRIBUTE_TYPE.U_SHORT ) glType = gl.UNSIGNED_SHORT
+    else                                       glType = gl.FLOAT
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0)
+    gl.enableVertexAttribArray(loc)
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+     
+    out[name] = { loc, buffer }
   }
   return new Success(out)
 }
@@ -90,7 +129,7 @@ function setupUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>)
 function setUniforms (gl: GL, program: WebGLProgram, activeUniforms: ActiveUniforms, uniforms: Block<Uniform>) {
   for ( const key in uniforms ) {
     const uniform = uniforms[key]
-    const loc = activeUniforms[key]
+    const { loc } = activeUniforms[key]
 
     switch ( uniform.kind ) {
       case UNIFORM_TYPE.f1:        gl.uniform1f(loc, uniform.value); break;
@@ -116,35 +155,15 @@ function setUniforms (gl: GL, program: WebGLProgram, activeUniforms: ActiveUnifo
   }
 }
 
-function setupAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attribute>): Either<ActiveAttributes> {
-  const out: Block<ActiveAttribute> = {}
-
+function setAttributes (gl: GL, program: WebGLProgram, activeAttributes: ActiveAttributes, attributes: Block<Attribute>) {
   for ( const name in attributes ) {
-    const { kind, value, size, offset, stride } = attributes[name]
-    const loc = gl.getAttribLocation(program, name) 
-
-    if ( loc == null ) return new Failure(`Could not find attrib ${ name }`)
-
-    const buffer = gl.createBuffer()
-
-    if ( buffer == null ) return new Failure('Could not create buffer')
-     
+    const { value } = attributes[name]
+    const { buffer } = activeAttributes[name]
     const content = value instanceof Float32Array ? value : new Float32Array(value)
-
-    var glType: number
-    if      ( kind == ATTRIBUTE_TYPE.BYTE )    glType = gl.BYTE
-    else if ( kind == ATTRIBUTE_TYPE.U_BYTE )  glType = gl.UNSIGNED_BYTE
-    else if ( kind == ATTRIBUTE_TYPE.SHORT )   glType = gl.SHORT
-    else if ( kind == ATTRIBUTE_TYPE.U_SHORT ) glType = gl.UNSIGNED_SHORT
-    else                                       glType = gl.FLOAT
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW)
-    gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0)
-    gl.enableVertexAttribArray(loc)
-    out[name] = { kind, value, size, offset, stride, loc, buffer }
   }
-  return new Success(out)
 }
 
 function compileShader (gl: GL, kind: number, src: string): Either<WebGLShader> {
