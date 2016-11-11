@@ -2,11 +2,8 @@ import { Either, fmap, flatMap, Success, Failure, unit } from './Either'
 
 type GL = WebGLRenderingContext
 
-export type Shader = Either<WebGLShader>
-export type Program = Either<WebGLProgram>
-export type Result = Either<Command>
-export type ActiveUniforms = Either<Block<WebGLUniformLocation>>
-export type ActiveAttributes = Either<Block<ActiveAttribute>>
+export type ActiveUniforms = Block<WebGLUniformLocation>
+export type ActiveAttributes = Block<ActiveAttribute>
 export type Block<T> = { [ name: string ]: T }
 export type ShaderSrc = string
 export type ATTRIBUTE_SIZE = 1 | 2 | 3 | 4
@@ -20,28 +17,28 @@ export enum UNIFORM_TYPE {
 }
 
 export type Uniform
-  = { type: UNIFORM_TYPE.f1, value: number }
-  | { type: UNIFORM_TYPE.f2, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.f3, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.f4, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.i1, value: number }
-  | { type: UNIFORM_TYPE.i2, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.i3, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.i4, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.f1v, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.f2v, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.f3v, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.f4v, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.i1v, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.i2v, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.i3v, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.i4v, value: number[] | Int32Array }
-  | { type: UNIFORM_TYPE.matrix2fv, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.matrix3fv, value: number[] | Float32Array }
-  | { type: UNIFORM_TYPE.matrix4fv, value: number[] | Float32Array }
+  = { kind: UNIFORM_TYPE.f1, value: number }
+  | { kind: UNIFORM_TYPE.f2, vector: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f3, vector: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f4, vector: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.i1, value: number }
+  | { kind: UNIFORM_TYPE.i2, vector: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i3, vector: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i4, vector: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.f1v, list: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f2v, list: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f3v, list: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f4v, list: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.i1v, list: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i2v, list: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i3v, list: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i4v, list: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.matrix2fv, matrices: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.matrix3fv, matrices: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.matrix4fv, matrices: number[] | Float32Array }
 
 export interface Attribute { 
-  type: ATTRIBUTE_TYPE, 
+  kind: ATTRIBUTE_TYPE, 
   value: ArrayLike<number>
   size: ATTRIBUTE_SIZE,
   offset?: number,
@@ -49,7 +46,7 @@ export interface Attribute {
 }
 
 export interface ActiveAttribute extends Attribute {
-  location: number
+  loc: number
   buffer: WebGLBuffer
 }
 
@@ -67,80 +64,90 @@ export interface Command {
   attributes: Block<ActiveAttribute>
 }
 
-export function createCommand<I extends Config> (gl: GL, cfg: I): Result {
+export function createCommand<I extends Config> (gl: GL, cfg: I): Either<Command> {
   const { uniforms, vsrc, fsrc } = cfg
 
   return flatMap(fromSource(gl, vsrc, fsrc),                    program => 
          flatMap(setupUniforms(gl, program, uniforms),          uniformLocations => 
-         flatMap(setupAttributes(gl, program, cfg.attributes),  attributes => 
-         new Success({ program, uniforms, uniformLocations, attributes }))))
+         flatMap(setupAttributes(gl, program, cfg.attributes),  attributes => {
+           setUniforms(gl, program, uniformLocations, uniforms)
+           return new Success({ program, uniforms, uniformLocations, attributes })})))
 }
 
-function setupUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>): ActiveUniforms {
+function setupUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>): Either<ActiveUniforms> {
   const out: Block<WebGLUniformLocation> = {}
 
   for ( const name in uniforms ) {
     const uniform = uniforms[name]
-    const location = gl.getUniformLocation(program, name) 
+    const loc = gl.getUniformLocation(program, name) 
 
-    if ( location == null ) return new Failure(`Could not find location for ${ name }`)
-   
-    if      ( uniform.type == UNIFORM_TYPE.f1 )        gl.uniform1f(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.f2 )        gl.uniform2f(location, uniform.value[0], uniform.value[1])
-    else if ( uniform.type == UNIFORM_TYPE.f3 )        gl.uniform3f(location, uniform.value[0], uniform.value[1], uniform.value[2])
-    else if ( uniform.type == UNIFORM_TYPE.f4 )        gl.uniform4f(location, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-    else if ( uniform.type == UNIFORM_TYPE.i1 )        gl.uniform1i(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.i2 )        gl.uniform2i(location, uniform.value[0], uniform.value[1])
-    else if ( uniform.type == UNIFORM_TYPE.i3 )        gl.uniform3i(location, uniform.value[0], uniform.value[1], uniform.value[2])
-    else if ( uniform.type == UNIFORM_TYPE.i4 )        gl.uniform4i(location, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-    else if ( uniform.type == UNIFORM_TYPE.f1v )       gl.uniform1fv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.f2v )       gl.uniform2fv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.f3v )       gl.uniform3fv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.f4v )       gl.uniform4fv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.i1v )       gl.uniform1iv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.i2v )       gl.uniform2iv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.i3v )       gl.uniform3iv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.i4v )       gl.uniform4iv(location, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.matrix2fv ) gl.uniformMatrix2fv(location, false, uniform.value)
-    else if ( uniform.type == UNIFORM_TYPE.matrix3fv ) gl.uniformMatrix3fv(location, false, uniform.value)
-    else                                               gl.uniformMatrix4fv(location, false, uniform.value)
-    out[name] = location
+    if ( loc == null ) return new Failure(`Could not find location for ${ name }`)
+    out[name] = loc
   }
   return new Success(out)
 }
 
-function setupAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attribute>): ActiveAttributes {
+function setUniforms (gl: GL, program: WebGLProgram, activeUniforms: ActiveUniforms, uniforms: Block<Uniform>) {
+  for ( const key in uniforms ) {
+    const uniform = uniforms[key]
+    const loc = activeUniforms[key]
+
+    switch ( uniform.kind ) {
+      case UNIFORM_TYPE.f1:        gl.uniform1f(loc, uniform.value); break;
+      case UNIFORM_TYPE.f2:        gl.uniform2f(loc, uniform.vector[0], uniform.vector[1]); break;
+      case UNIFORM_TYPE.f3:        gl.uniform3f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]); break;
+      case UNIFORM_TYPE.f4:        gl.uniform4f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]); break;
+      case UNIFORM_TYPE.i1:        gl.uniform1i(loc, uniform.value); break;
+      case UNIFORM_TYPE.i2:        gl.uniform2i(loc, uniform.vector[0], uniform.vector[1]); break;
+      case UNIFORM_TYPE.i3:        gl.uniform3i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]); break;
+      case UNIFORM_TYPE.i4:        gl.uniform4i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]); break;
+      case UNIFORM_TYPE.f1v:       gl.uniform1fv(loc, uniform.list); break;
+      case UNIFORM_TYPE.f2v:       gl.uniform2fv(loc, uniform.list); break;
+      case UNIFORM_TYPE.f3v:       gl.uniform3fv(loc, uniform.list); break;
+      case UNIFORM_TYPE.f4v:       gl.uniform4fv(loc, uniform.list); break;
+      case UNIFORM_TYPE.i1v:       gl.uniform1iv(loc, uniform.list); break;
+      case UNIFORM_TYPE.i2v:       gl.uniform2iv(loc, uniform.list); break;
+      case UNIFORM_TYPE.i3v:       gl.uniform3iv(loc, uniform.list); break;
+      case UNIFORM_TYPE.i4v:       gl.uniform4iv(loc, uniform.list); break;
+      case UNIFORM_TYPE.matrix2fv: gl.uniformMatrix2fv(loc, false, uniform.matrices); break;
+      case UNIFORM_TYPE.matrix3fv: gl.uniformMatrix3fv(loc, false, uniform.matrices); break;
+      case UNIFORM_TYPE.matrix4fv: gl.uniformMatrix4fv(loc, false, uniform.matrices); break;
+    }
+  }
+}
+
+function setupAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attribute>): Either<ActiveAttributes> {
   const out: Block<ActiveAttribute> = {}
 
   for ( const name in attributes ) {
-    const { type, value, size, offset, stride } = attributes[name]
-    const location = gl.getAttribLocation(program, name) 
+    const { kind, value, size, offset, stride } = attributes[name]
+    const loc = gl.getAttribLocation(program, name) 
 
-    if ( location == null ) return new Failure(`Could not find attrib ${ name }`)
+    if ( loc == null ) return new Failure(`Could not find attrib ${ name }`)
 
     const buffer = gl.createBuffer()
 
-    if ( buffer == null )   return new Failure('Could not create buffer')
+    if ( buffer == null ) return new Failure('Could not create buffer')
      
     const content = value instanceof Float32Array ? value : new Float32Array(value)
 
     var glType: number
-    if      ( type == ATTRIBUTE_TYPE.BYTE )   glType = gl.BYTE
-    else if ( type == ATTRIBUTE_TYPE.U_BYTE)  glType = gl.UNSIGNED_BYTE
-    else if ( type == ATTRIBUTE_TYPE.SHORT)   glType = gl.SHORT
-    else if ( type == ATTRIBUTE_TYPE.U_SHORT) glType = gl.UNSIGNED_SHORT
-    else                                      glType = gl.FLOAT
+    if      ( kind == ATTRIBUTE_TYPE.BYTE )    glType = gl.BYTE
+    else if ( kind == ATTRIBUTE_TYPE.U_BYTE )  glType = gl.UNSIGNED_BYTE
+    else if ( kind == ATTRIBUTE_TYPE.SHORT )   glType = gl.SHORT
+    else if ( kind == ATTRIBUTE_TYPE.U_SHORT ) glType = gl.UNSIGNED_SHORT
+    else                                       glType = gl.FLOAT
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW)
-    gl.vertexAttribPointer(location, size, glType, false, stride || 0, offset || 0)
-    gl.enableVertexAttribArray(location)
-    out[name] = { type, value, size, offset, stride, location, buffer }
+    gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0)
+    gl.enableVertexAttribArray(loc)
+    out[name] = { kind, value, size, offset, stride, loc, buffer }
   }
   return new Success(out)
 }
 
-function compileShader (gl: GL, kind: number, src: string): Shader {
+function compileShader (gl: GL, kind: number, src: string): Either<WebGLShader> {
   const shader = gl.createShader(kind)
   const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT'
 
@@ -151,7 +158,7 @@ function compileShader (gl: GL, kind: number, src: string): Shader {
     : new Failure(`${ kindStr }: ${ gl.getShaderInfoLog(shader) || '' }`)
 }
 
-function linkProgram (gl: GL, vertex: WebGLShader, fragment: WebGLShader): Program {
+function linkProgram (gl: GL, vertex: WebGLShader, fragment: WebGLShader): Either<WebGLProgram> {
   const program = gl.createProgram()
 
   gl.attachShader(program, vertex)
@@ -163,8 +170,8 @@ function linkProgram (gl: GL, vertex: WebGLShader, fragment: WebGLShader): Progr
     : new Failure(gl.getProgramInfoLog(program) || '')
 }
 
-function fromSource (gl: GL, vsrc: string, fsrc: string): Program {
+function fromSource (gl: GL, vsrc: string, fsrc: string): Either<WebGLProgram> {
   return flatMap(compileShader(gl, gl.VERTEX_SHADER, vsrc),   vertex =>
          flatMap(compileShader(gl, gl.FRAGMENT_SHADER, fsrc), fragment =>
-         linkProgram(gl, vertex, fragment))) as Program
+         linkProgram(gl, vertex, fragment)))
 }

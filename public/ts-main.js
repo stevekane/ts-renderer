@@ -33,85 +33,115 @@ var UNIFORM_TYPE;
 })(UNIFORM_TYPE = exports.UNIFORM_TYPE || (exports.UNIFORM_TYPE = {}));
 function createCommand(gl, cfg) {
     const { uniforms, vsrc, fsrc } = cfg;
-    return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(setupAttributes(gl, program, cfg.attributes), attributes => new Either_1.Success({ program, uniforms, uniformLocations, attributes }))));
+    return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(setupAttributes(gl, program, cfg.attributes), attributes => {
+        setUniforms(gl, program, uniformLocations, uniforms);
+        return new Either_1.Success({ program, uniforms, uniformLocations, attributes });
+    })));
 }
 exports.createCommand = createCommand;
 function setupUniforms(gl, program, uniforms) {
     const out = {};
     for (const name in uniforms) {
         const uniform = uniforms[name];
-        const location = gl.getUniformLocation(program, name);
-        if (location == null)
+        const loc = gl.getUniformLocation(program, name);
+        if (loc == null)
             return new Either_1.Failure(`Could not find location for ${name}`);
-        if (uniform.type == UNIFORM_TYPE.f1)
-            gl.uniform1f(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.f2)
-            gl.uniform2f(location, uniform.value[0], uniform.value[1]);
-        else if (uniform.type == UNIFORM_TYPE.f3)
-            gl.uniform3f(location, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.type == UNIFORM_TYPE.f4)
-            gl.uniform4f(location, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.type == UNIFORM_TYPE.i1)
-            gl.uniform1i(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.i2)
-            gl.uniform2i(location, uniform.value[0], uniform.value[1]);
-        else if (uniform.type == UNIFORM_TYPE.i3)
-            gl.uniform3i(location, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.type == UNIFORM_TYPE.i4)
-            gl.uniform4i(location, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.type == UNIFORM_TYPE.f1v)
-            gl.uniform1fv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.f2v)
-            gl.uniform2fv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.f3v)
-            gl.uniform3fv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.f4v)
-            gl.uniform4fv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.i1v)
-            gl.uniform1iv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.i2v)
-            gl.uniform2iv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.i3v)
-            gl.uniform3iv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.i4v)
-            gl.uniform4iv(location, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.matrix2fv)
-            gl.uniformMatrix2fv(location, false, uniform.value);
-        else if (uniform.type == UNIFORM_TYPE.matrix3fv)
-            gl.uniformMatrix3fv(location, false, uniform.value);
-        else
-            gl.uniformMatrix4fv(location, false, uniform.value);
-        out[name] = location;
+        out[name] = loc;
     }
     return new Either_1.Success(out);
+}
+function setUniforms(gl, program, activeUniforms, uniforms) {
+    for (const key in uniforms) {
+        const uniform = uniforms[key];
+        const loc = activeUniforms[key];
+        switch (uniform.kind) {
+            case UNIFORM_TYPE.f1:
+                gl.uniform1f(loc, uniform.value);
+                break;
+            case UNIFORM_TYPE.f2:
+                gl.uniform2f(loc, uniform.vector[0], uniform.vector[1]);
+                break;
+            case UNIFORM_TYPE.f3:
+                gl.uniform3f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]);
+                break;
+            case UNIFORM_TYPE.f4:
+                gl.uniform4f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]);
+                break;
+            case UNIFORM_TYPE.i1:
+                gl.uniform1i(loc, uniform.value);
+                break;
+            case UNIFORM_TYPE.i2:
+                gl.uniform2i(loc, uniform.vector[0], uniform.vector[1]);
+                break;
+            case UNIFORM_TYPE.i3:
+                gl.uniform3i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]);
+                break;
+            case UNIFORM_TYPE.i4:
+                gl.uniform4i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]);
+                break;
+            case UNIFORM_TYPE.f1v:
+                gl.uniform1fv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.f2v:
+                gl.uniform2fv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.f3v:
+                gl.uniform3fv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.f4v:
+                gl.uniform4fv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.i1v:
+                gl.uniform1iv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.i2v:
+                gl.uniform2iv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.i3v:
+                gl.uniform3iv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.i4v:
+                gl.uniform4iv(loc, uniform.list);
+                break;
+            case UNIFORM_TYPE.matrix2fv:
+                gl.uniformMatrix2fv(loc, false, uniform.matrices);
+                break;
+            case UNIFORM_TYPE.matrix3fv:
+                gl.uniformMatrix3fv(loc, false, uniform.matrices);
+                break;
+            case UNIFORM_TYPE.matrix4fv:
+                gl.uniformMatrix4fv(loc, false, uniform.matrices);
+                break;
+        }
+    }
 }
 function setupAttributes(gl, program, attributes) {
     const out = {};
     for (const name in attributes) {
-        const { type, value, size, offset, stride } = attributes[name];
-        const location = gl.getAttribLocation(program, name);
-        if (location == null)
+        const { kind, value, size, offset, stride } = attributes[name];
+        const loc = gl.getAttribLocation(program, name);
+        if (loc == null)
             return new Either_1.Failure(`Could not find attrib ${name}`);
         const buffer = gl.createBuffer();
         if (buffer == null)
             return new Either_1.Failure('Could not create buffer');
         const content = value instanceof Float32Array ? value : new Float32Array(value);
         var glType;
-        if (type == ATTRIBUTE_TYPE.BYTE)
+        if (kind == ATTRIBUTE_TYPE.BYTE)
             glType = gl.BYTE;
-        else if (type == ATTRIBUTE_TYPE.U_BYTE)
+        else if (kind == ATTRIBUTE_TYPE.U_BYTE)
             glType = gl.UNSIGNED_BYTE;
-        else if (type == ATTRIBUTE_TYPE.SHORT)
+        else if (kind == ATTRIBUTE_TYPE.SHORT)
             glType = gl.SHORT;
-        else if (type == ATTRIBUTE_TYPE.U_SHORT)
+        else if (kind == ATTRIBUTE_TYPE.U_SHORT)
             glType = gl.UNSIGNED_SHORT;
         else
             glType = gl.FLOAT;
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
-        gl.vertexAttribPointer(location, size, glType, false, stride || 0, offset || 0);
-        gl.enableVertexAttribArray(location);
-        out[name] = { type, value, size, offset, stride, location, buffer };
+        gl.vertexAttribPointer(loc, size, glType, false, stride || 0, offset || 0);
+        gl.enableVertexAttribArray(loc);
+        out[name] = { kind, value, size, offset, stride, loc, buffer };
     }
     return new Either_1.Success(out);
 }
@@ -817,14 +847,14 @@ const command = Command_1.createCommand(gl, {
     vsrc: per_vertex_vsrc_1.default,
     fsrc: per_vertex_fsrc_1.default,
     uniforms: {
-        u_light: { type: Command_1.UNIFORM_TYPE.f3, value: [0, 0, 0] },
-        u_model: { type: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() },
-        u_view: { type: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() },
-        u_projection: { type: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() }
+        u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: [0, 0, 0] },
+        u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
+        u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
+        u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() }
     },
     attributes: {
-        a_coord: { type: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
-        a_normal: { type: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
+        a_coord: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
+        a_normal: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
     }
 });
 console.log(command);

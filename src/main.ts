@@ -57,14 +57,14 @@ const command = createCommand(gl, {
   vsrc,
   fsrc,
   uniforms: {
-    u_light: { type: U.f3, value: [ 0, 0, 0 ] },
-    u_model: { type: U.matrix4fv, value: M4() },
-    u_view: { type: U.matrix4fv, value: M4() },
-    u_projection: { type: U.matrix4fv, value: M4() }
+    u_light: { kind: U.f3, vector: [ 0, 0, 0 ] },
+    u_model: { kind: U.matrix4fv, matrices: M4() },
+    u_view: { kind: U.matrix4fv, matrices: M4() },
+    u_projection: { kind: U.matrix4fv, matrices: M4() }
   },
   attributes: {
-    a_coord: { type: A.FLOAT, value: [], size: 3 },
-    a_normal: { type: A.FLOAT, value: [], size: 3 },
+    a_coord: { kind: A.FLOAT, value: [], size: 3 },
+    a_normal: { kind: A.FLOAT, value: [], size: 3 },
     // a_texCoord: { type: A.FLOAT, value: [], size: 2 },
   }
 })
