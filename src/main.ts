@@ -1,7 +1,7 @@
 import vsrc from './shaders/per-vertex-vsrc'
 import fsrc from './shaders/per-vertex-fsrc'
 import { loadXHR } from './Load'
-import { createCommand } from './Command'
+import { createCommand, UNIFORM_TYPE as U, ATTRIBUTE_TYPE as A } from './Command'
 import { IRenderable } from './Rendering/core'
 import { ILookAtCamera } from './Rendering/Camera'
 import { parseOBJ } from './Parsers/OBJ'
@@ -42,7 +42,6 @@ function drawRenderable (gl: WebGLRenderingContext, cam: ILookAtCamera, light: V
   // gl.vertexAttribPointer(attributes.a_texCoord, 2, gl.FLOAT, false, 0, 0)
   // gl.enableVertexAttribArray(attributes.a_texCoord)
 
-  gl.uniform1f(uniforms.u_time, now()) 
   gl.uniform3f(uniforms.u_light, light[0], light[1], light[2])
   gl.uniformMatrix4fv(uniforms.u_model, false, modelMatrix)
   gl.uniformMatrix4fv(uniforms.u_view, false, cam.view)
@@ -58,13 +57,16 @@ const command = createCommand(gl, {
   vsrc,
   fsrc,
   uniforms: {
-    u_time: { type: '1f', val: 0 },
-    u_light: { type: '3f', x: 0, y: 0, z: 0 },
-    u_model: { type: 'matrix4fv', buffer: M4() },
-    u_view: { type: 'matrix4fv', buffer: M4() },
-    u_projection: { type: 'matrix4fv', buffer: M4() }
+    u_light: { type: U.f3, value: [ 0, 0, 0 ] },
+    u_model: { type: U.matrix4fv, value: M4() },
+    u_view: { type: U.matrix4fv, value: M4() },
+    u_projection: { type: U.matrix4fv, value: M4() }
   },
-  attributes: {}
+  attributes: {
+    a_coord: { type: A.FLOAT, value: [], size: 3 },
+    a_normal: { type: A.FLOAT, value: [], size: 3 },
+    // a_texCoord: { type: A.FLOAT, value: [], size: 2 },
+  }
 })
 
 console.log(command)
