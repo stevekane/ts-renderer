@@ -31,6 +31,22 @@ var UNIFORM_TYPE;
     UNIFORM_TYPE[UNIFORM_TYPE["matrix3fv"] = 17] = "matrix3fv";
     UNIFORM_TYPE[UNIFORM_TYPE["matrix4fv"] = 18] = "matrix4fv";
 })(UNIFORM_TYPE = exports.UNIFORM_TYPE || (exports.UNIFORM_TYPE = {}));
+function run(gl, c, cfg) {
+    gl.useProgram(c.program);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.depthFunc(gl.LEQUAL);
+    setUniforms(gl, c.program, c.activeUniforms, c.uniforms);
+    setUniforms(gl, c.program, c.activeUniforms, cfg.uniforms);
+    setAttributes(gl, c.program, c.activeAttributes, c.attributes);
+    setAttributes(gl, c.program, c.activeAttributes, cfg.attributes);
+    gl.drawArrays(gl.TRIANGLES, 0, cfg.count);
+    for (var key in c.activeAttributes) {
+        gl.disableVertexAttribArray(c.activeAttributes[key].loc);
+    }
+    gl.useProgram(null);
+}
+exports.run = run;
 function createCommand(gl, cfg) {
     const { uniforms, attributes, vsrc, fsrc } = cfg;
     return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), activeUniforms => Either_1.flatMap(setupAttributes(gl, program, attributes), activeAttributes => {
@@ -148,10 +164,11 @@ function setUniforms(gl, program, activeUniforms, uniforms) {
 function setAttributes(gl, program, activeAttributes, attributes) {
     for (const name in attributes) {
         const { value } = attributes[name];
-        const { buffer } = activeAttributes[name];
+        const { buffer, loc } = activeAttributes[name];
         const content = value instanceof Float32Array ? value : new Float32Array(value);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
+        gl.enableVertexAttribArray(loc);
     }
 }
 function compileShader(gl, kind, src) {
@@ -817,124 +834,82 @@ const Load_1 = require("./Load");
 const Command_1 = require("./Command");
 const OBJ_1 = require("./Parsers/OBJ");
 const Matrix_1 = require("./Matrix");
-function drawRenderable(gl, cam, light, r) {
-    const { program, attributes, uniforms, geometry } = r.mesh;
-    const modelMatrix = r.model;
-    Matrix_1.identity(modelMatrix);
-    Matrix_1.translate(modelMatrix, r.position);
-    Matrix_1.scale(modelMatrix, r.scale);
-    Matrix_1.rotateX(modelMatrix, r.rotation[0]);
-    Matrix_1.rotateY(modelMatrix, r.rotation[1]);
-    Matrix_1.rotateZ(modelMatrix, r.rotation[2]);
-    // All GL State setup and a single function call below here:
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
-    gl.depthFunc(gl.LEQUAL);
-    gl.useProgram(program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_coord);
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(attributes.a_coord, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(attributes.a_coord);
-    gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_normal);
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.normals, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(attributes.a_normal);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, r.buffers.a_texCoord)
-    // gl.bufferData(gl.ARRAY_BUFFER, geometry.texCoords, gl.DYNAMIC_DRAW)
-    // gl.vertexAttribPointer(attributes.a_texCoord, 2, gl.FLOAT, false, 0, 0)
-    // gl.enableVertexAttribArray(attributes.a_texCoord)
-    gl.uniform3f(uniforms.u_light, light[0], light[1], light[2]);
-    gl.uniformMatrix4fv(uniforms.u_model, false, modelMatrix);
-    gl.uniformMatrix4fv(uniforms.u_view, false, cam.view);
-    gl.uniformMatrix4fv(uniforms.u_projection, false, cam.projection);
-    gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
-}
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
-const command = Command_1.createCommand(gl, {
-    vsrc: per_vertex_vsrc_1.default,
-    fsrc: per_vertex_fsrc_1.default,
-    uniforms: {
-        u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: [0, 0, 0] },
-        u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
-        u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
-        u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() }
-    },
-    attributes: {
-        a_coord: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
-        a_normal: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: [], size: 3 },
-    }
-});
-console.log(command);
-if (command.success) {
-    Load_1.loadXHR('pyramid.obj')
-        .then(OBJ_1.parseOBJ)
-        .then(parsedGeometry => {
-        if (!parsedGeometry.success)
-            return;
-        const entity = {
+Load_1.loadXHR('pyramid.obj')
+    .then(OBJ_1.parseOBJ)
+    .then(geometry => {
+    if (!geometry.success)
+        return;
+    const light = Matrix_1.V3(0, 2, 0);
+    const cam = {
+        position: new Float32Array([0, 1, 5]),
+        view: Matrix_1.M4(),
+        projection: Matrix_1.M4(),
+        vfov: Math.PI / 4,
+        aspectRatio: c.width / c.height,
+        near: 0.1,
+        far: 10000,
+        up: Matrix_1.V3(0, 1, 0),
+        at: Matrix_1.V3(0, 0, 0)
+    };
+    const command = Command_1.createCommand(gl, {
+        vsrc: per_vertex_vsrc_1.default,
+        fsrc: per_vertex_fsrc_1.default,
+        count: 12,
+        uniforms: {
+            u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: Matrix_1.V3(0, 0, 0) },
+            u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
+            u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
+            u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() }
+        },
+        attributes: {
+            a_coord: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: geometry.val.vertices, size: 3 },
+            a_normal: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: geometry.val.normals, size: 3 },
+        }
+    });
+    const entities = [{
             position: Matrix_1.V3(0, 0, 0),
             scale: Matrix_1.V3(1, 1, 1),
             rotation: Matrix_1.V3(0, 0, 0),
-            model: Matrix_1.M4(),
-            mesh: {
-                geometry: parsedGeometry.val,
-                program: command.value.program,
-                uniforms: {
-                    u_time: gl.getUniformLocation(command.value.program, 'u_time'),
-                    u_light: gl.getUniformLocation(command.value.program, 'u_light'),
-                    u_model: gl.getUniformLocation(command.value.program, 'u_model'),
-                    u_view: gl.getUniformLocation(command.value.program, 'u_view'),
-                    u_projection: gl.getUniformLocation(command.value.program, 'u_projection')
-                },
-                attributes: {
-                    a_coord: gl.getAttribLocation(command.value.program, 'a_coord'),
-                    a_normal: gl.getAttribLocation(command.value.program, 'a_normal'),
-                    a_texCoord: gl.getAttribLocation(command.value.program, 'a_texCoord')
-                }
-            },
-            buffers: {
-                a_coord: gl.createBuffer(),
-                a_normal: gl.createBuffer(),
-                a_texCoord: gl.createBuffer()
-            }
-        };
-        const entities = [entity];
-        const light = Matrix_1.V3(0, 2, 0);
-        const cam = {
-            position: new Float32Array([0, 1, 5]),
-            view: Matrix_1.M4(),
-            projection: Matrix_1.M4(),
-            vfov: Math.PI / 4,
-            aspectRatio: c.width / c.height,
-            near: 0.1,
-            far: 10000,
-            up: Matrix_1.V3(0, 1, 0),
-            at: Matrix_1.V3(0, 0, 0)
-        };
-        requestAnimationFrame(function render() {
-            const t = now();
-            for (var i = 0; i < entities.length; i++) {
-                entities[i].rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
-            }
-            light[0] = Math.sin(t / 1000) * 4;
-            cam.aspectRatio = c.width / c.height;
-            Matrix_1.lookAt(cam.view, cam.position, cam.at, cam.up);
-            Matrix_1.perspective(cam.projection, cam.vfov, cam.aspectRatio, cam.near, cam.far);
-            gl.viewport(0, 0, c.width, c.height);
-            gl.clearColor(0, 0, 0, 0);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            for (var j = 0; j < entities.length; j++) {
-                drawRenderable(gl, cam, light, entities[j]);
-            }
-            requestAnimationFrame(render);
-        });
+            model: Matrix_1.M4()
+        }];
+    requestAnimationFrame(function render() {
+        const t = now();
+        for (var i = 0; i < entities.length; i++) {
+            var entity = entities[i];
+            entity.rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
+            Matrix_1.identity(entity.model);
+            Matrix_1.translate(entity.model, entity.position);
+            Matrix_1.scale(entity.model, entity.scale);
+            Matrix_1.rotateX(entity.model, entity.rotation[0]);
+            Matrix_1.rotateY(entity.model, entity.rotation[1]);
+            Matrix_1.rotateZ(entity.model, entity.rotation[2]);
+        }
+        cam.aspectRatio = c.width / c.height;
+        Matrix_1.lookAt(cam.view, cam.position, cam.at, cam.up);
+        Matrix_1.perspective(cam.projection, cam.vfov, cam.aspectRatio, cam.near, cam.far);
+        gl.viewport(0, 0, c.width, c.height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        for (var i = 0; i < entities.length; i++) {
+            var entity = entities[i];
+            if (command.success)
+                Command_1.run(gl, command.value, {
+                    count: 12,
+                    uniforms: {
+                        u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: light },
+                        u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: entity.model },
+                        u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: cam.view },
+                        u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: cam.projection }
+                    },
+                    attributes: {}
+                });
+        }
+        requestAnimationFrame(render);
     });
-}
-else {
-    console.log(command.value);
-}
+});
 
 },{"./Command":1,"./Load":3,"./Matrix":4,"./Parsers/OBJ":5,"./shaders/per-vertex-fsrc":10,"./shaders/per-vertex-vsrc":11}],10:[function(require,module,exports){
 "use strict";

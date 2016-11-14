@@ -1,6 +1,6 @@
 import { Either, fmap, flatMap, Success, Failure, unit } from './Either'
 
-type GL = WebGLRenderingContext
+export type GL = WebGLRenderingContext
 
 export type Block<T> = { [ name: string ]: T }
 export type ShaderSrc = string
@@ -57,11 +57,15 @@ export interface ActiveAttribute {
   buffer: WebGLBuffer
 }
 
-export interface Config {
+export interface Source {
   vsrc: ShaderSrc
   fsrc: ShaderSrc
+}
+
+export interface Config {
   uniforms: Block<Uniform> 
   attributes: Block<Attribute>
+  count: number
 }
 
 export interface Command {
@@ -72,7 +76,27 @@ export interface Command {
   activeAttributes: ActiveAttributes
 }
 
-export function createCommand<I extends Config> (gl: GL, cfg: I): Either<Command> {
+export function run (gl: GL, c: Command, cfg: Config) {
+  gl.useProgram(c.program)
+  gl.enable(gl.DEPTH_TEST)
+  gl.enable(gl.CULL_FACE)
+  gl.depthFunc(gl.LEQUAL)
+
+  setUniforms(gl, c.program, c.activeUniforms, c.uniforms)
+  setUniforms(gl, c.program, c.activeUniforms, cfg.uniforms)
+  setAttributes(gl, c.program, c.activeAttributes, c.attributes)
+  setAttributes(gl, c.program, c.activeAttributes, cfg.attributes)
+
+  gl.drawArrays(gl.TRIANGLES, 0, cfg.count)
+
+  for ( var key in c.activeAttributes ) {
+    gl.disableVertexAttribArray(c.activeAttributes[key].loc)
+  }
+
+  gl.useProgram(null)
+}
+
+export function createCommand<I extends Source & Config> (gl: GL, cfg: I): Either<Command> {
   const { uniforms, attributes, vsrc, fsrc } = cfg
 
   return flatMap(fromSource(gl, vsrc, fsrc),                    program => 
@@ -158,11 +182,12 @@ function setUniforms (gl: GL, program: WebGLProgram, activeUniforms: ActiveUnifo
 function setAttributes (gl: GL, program: WebGLProgram, activeAttributes: ActiveAttributes, attributes: Block<Attribute>) {
   for ( const name in attributes ) {
     const { value } = attributes[name]
-    const { buffer } = activeAttributes[name]
+    const { buffer, loc } = activeAttributes[name]
     const content = value instanceof Float32Array ? value : new Float32Array(value)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW)
+    gl.enableVertexAttribArray(loc)
   }
 }
 
