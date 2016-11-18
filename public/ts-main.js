@@ -36,24 +36,23 @@ function run(gl, c, cfg) {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.depthFunc(gl.LEQUAL);
-    // TODO: We should actually loop over the uniforms in c, setting them from c or from cfg... i think
-    // TODO: Same as above for attribtues... I think
-    setUniforms(gl, c.program, c.uniformLocations, c.uniforms);
-    setUniforms(gl, c.program, c.uniformLocations, cfg.uniforms);
-    setAttributes(gl, c.program, c.attributeLocations, c.buffers, c.attributes);
-    setAttributes(gl, c.program, c.attributeLocations, c.buffers, cfg.attributes);
+    for (const key in c.uniforms)
+        setUniform(gl, c.program, c.uniformLocations[key], cfg.uniforms[key] || c.uniforms[key]);
+    for (const key in c.attributes)
+        setAttribute(gl, c.program, c.attributeLocations[key], c.buffers[key], cfg.attributes[key] || c.attributes[key]);
     gl.drawArrays(gl.TRIANGLES, 0, cfg.count);
-    for (var key in c.attributeLocations) {
+    for (const key in c.attributeLocations)
         gl.disableVertexAttribArray(c.attributeLocations[key]);
-    }
     gl.useProgram(null);
 }
 exports.run = run;
 function createCommand(gl, cfg) {
     const { count, uniforms, attributes, vsrc, fsrc } = cfg;
     return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(locateUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(locateAttributes(gl, program, attributes), attributeLocations => Either_1.flatMap(setupBuffers(gl, program, attributes, attributeLocations), buffers => {
-        setUniforms(gl, program, uniformLocations, uniforms);
-        setAttributes(gl, program, attributeLocations, buffers, attributes);
+        for (const key in uniforms)
+            setUniform(gl, program, uniformLocations[key], uniforms[key]);
+        for (const key in attributes)
+            setAttribute(gl, program, attributeLocations[key], buffers[key], attributes[key]);
         return new Either_1.Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count });
     }))));
 }
@@ -106,61 +105,52 @@ function setupBuffers(gl, program, attributes, attributeLocations) {
     }
     return new Either_1.Success(out);
 }
-function setUniforms(gl, program, uniformLocations, uniforms) {
-    for (const key in uniforms) {
-        const uniform = uniforms[key];
-        const loc = uniformLocations[key];
-        // switch statement seems to get fucked up here... unsure why.  it cannot see to infer the key to use for discrimination
-        if (uniform.kind === UniformType.F)
-            gl.uniform1f(loc, uniform.value);
-        else if (uniform.kind === UniformType.F2)
-            gl.uniform2f(loc, uniform.value[0], uniform.value[1]);
-        else if (uniform.kind === UniformType.F3)
-            gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.kind === UniformType.F4)
-            gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.kind === UniformType.I)
-            gl.uniform1i(loc, uniform.value);
-        else if (uniform.kind === UniformType.I2)
-            gl.uniform2i(loc, uniform.value[0], uniform.value[1]);
-        else if (uniform.kind === UniformType.I3)
-            gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.kind === UniformType.I4)
-            gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.kind === UniformType.FV)
-            gl.uniform1fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.FV2)
-            gl.uniform2fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.FV3)
-            gl.uniform3fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.FV4)
-            gl.uniform4fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.IV)
-            gl.uniform1iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.IV2)
-            gl.uniform2iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.IV3)
-            gl.uniform3iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.IV4)
-            gl.uniform4iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.MAT2)
-            gl.uniformMatrix2fv(loc, false, uniform.value);
-        else if (uniform.kind === UniformType.MAT3)
-            gl.uniformMatrix3fv(loc, false, uniform.value);
-        else if (uniform.kind === UniformType.MAT4)
-            gl.uniformMatrix4fv(loc, false, uniform.value);
-    }
+function setUniform(gl, program, loc, uniform) {
+    if (uniform.kind === UniformType.F)
+        gl.uniform1f(loc, uniform.value);
+    else if (uniform.kind === UniformType.F2)
+        gl.uniform2f(loc, uniform.value[0], uniform.value[1]);
+    else if (uniform.kind === UniformType.F3)
+        gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
+    else if (uniform.kind === UniformType.F4)
+        gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
+    else if (uniform.kind === UniformType.I)
+        gl.uniform1i(loc, uniform.value);
+    else if (uniform.kind === UniformType.I2)
+        gl.uniform2i(loc, uniform.value[0], uniform.value[1]);
+    else if (uniform.kind === UniformType.I3)
+        gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
+    else if (uniform.kind === UniformType.I4)
+        gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
+    else if (uniform.kind === UniformType.FV)
+        gl.uniform1fv(loc, uniform.value);
+    else if (uniform.kind === UniformType.FV2)
+        gl.uniform2fv(loc, uniform.value);
+    else if (uniform.kind === UniformType.FV3)
+        gl.uniform3fv(loc, uniform.value);
+    else if (uniform.kind === UniformType.FV4)
+        gl.uniform4fv(loc, uniform.value);
+    else if (uniform.kind === UniformType.IV)
+        gl.uniform1iv(loc, uniform.value);
+    else if (uniform.kind === UniformType.IV2)
+        gl.uniform2iv(loc, uniform.value);
+    else if (uniform.kind === UniformType.IV3)
+        gl.uniform3iv(loc, uniform.value);
+    else if (uniform.kind === UniformType.IV4)
+        gl.uniform4iv(loc, uniform.value);
+    else if (uniform.kind === UniformType.MAT2)
+        gl.uniformMatrix2fv(loc, false, uniform.value);
+    else if (uniform.kind === UniformType.MAT3)
+        gl.uniformMatrix3fv(loc, false, uniform.value);
+    else if (uniform.kind === UniformType.MAT4)
+        gl.uniformMatrix4fv(loc, false, uniform.value);
 }
-function setAttributes(gl, program, attributeLocations, buffers, attributes) {
-    for (const name in attributes) {
-        const { value } = attributes[name];
-        const loc = attributeLocations[name];
-        const buffer = buffers[name];
-        const content = value instanceof Float32Array ? value : new Float32Array(value);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(loc);
-    }
+function setAttribute(gl, program, loc, buffer, attribute) {
+    const { value } = attribute;
+    const content = value instanceof Float32Array ? value : new Float32Array(value);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(loc);
 }
 function compileShader(gl, kind, src) {
     const shader = gl.createShader(kind);
@@ -935,7 +925,7 @@ uniform mat4 u_view;
 uniform mat4 u_projection;
 
 const vec4 COLOR_SCALE = vec4(256.0, 256.0, 256.0, 1.0);
-const vec4 rgba = vec4(218.0, 165.0, 32.0, 1.0);
+const vec4 rgba = vec4(0.0, 255.0, 255.0, 1.0);
 const vec4 color = rgba / COLOR_SCALE;
 
 varying vec4 v_color;
@@ -951,7 +941,7 @@ void main () {
   float attenuation = 1.0 / (1.0 + (falloff * distance * distance));
   float diffuse = max(dot(MVNormal, light_vector), 0.1) * attenuation;
 
-  v_color = color * diffuse;
+  v_color = vec4(color[0] * diffuse, color[1] * diffuse, color[2] * diffuse, 1.0);
   gl_Position = MVP * vec4(a_coord, 1.0);
 }
 `;
