@@ -1,7 +1,7 @@
 import vsrc from './shaders/per-vertex-vsrc'
 import fsrc from './shaders/per-vertex-fsrc'
 import { loadXHR } from './Load'
-import { GL, run, createCommand, Command, Config, UNIFORM_TYPE as U, ATTRIBUTE_TYPE as A } from './Command'
+import { GL, run, createCommand, Command, Config, UniformType as U, AttributeType as A } from './Command'
 import { IRenderable } from './Rendering/core'
 import { ILookAtCamera } from './Rendering/Camera'
 import { parseOBJ } from './Parsers/OBJ'
@@ -97,9 +97,9 @@ loadXHR('pyramid.obj')
     count: 12,
     uniforms: {
       u_light: { kind: U.f3, value: V3(0, 0, 0) },
-      u_model: { kind: U.matrix4fv, value: M4() },
-      u_view: { kind: U.matrix4fv, value: M4() },
-      u_projection: { kind: U.matrix4fv, value: M4() }
+      u_model: { kind: U.mat4, value: M4() },
+      u_view: { kind: U.mat4, value: M4() },
+      u_projection: { kind: U.mat4, value: M4() }
     },
     attributes: {
       a_coord: { kind: A.FLOAT, value: geometry.val.vertices, size: 3 },
@@ -117,9 +117,7 @@ loadXHR('pyramid.obj')
   requestAnimationFrame(function render () {
     const t = now()
 
-    for ( var i = 0; i < entities.length; i++ ) {
-      var entity = entities[i]
-
+    for ( const entity of entities ) {
       entity.rotation[1] += 0.02
       identity(entity.model)
       translate(entity.model, entity.position)
@@ -143,9 +141,9 @@ loadXHR('pyramid.obj')
         count: 12,
         uniforms: {
           u_light: { kind: U.f3, value: light },
-          u_model: { kind: U.matrix4fv, value: entity.model },
-          u_view: { kind: U.matrix4fv, value: cam.view },
-          u_projection: { kind: U.matrix4fv, value: cam.projection }
+          u_model: { kind: U.mat4, value: entity.model },
+          u_view: { kind: U.mat4, value: cam.view },
+          u_projection: { kind: U.mat4, value: cam.projection }
         },
         attributes: {}
       })
