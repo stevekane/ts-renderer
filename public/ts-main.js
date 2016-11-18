@@ -48,11 +48,11 @@ function run(gl, c, cfg) {
 }
 exports.run = run;
 function createCommand(gl, cfg) {
-    const { uniforms, attributes, vsrc, fsrc } = cfg;
+    const { count, uniforms, attributes, vsrc, fsrc } = cfg;
     return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(setupUniforms(gl, program, uniforms), activeUniforms => Either_1.flatMap(setupAttributes(gl, program, attributes), activeAttributes => {
         setUniforms(gl, program, activeUniforms, uniforms);
         setAttributes(gl, program, activeAttributes, attributes);
-        return new Either_1.Success({ program, uniforms, attributes, activeUniforms, activeAttributes });
+        return new Either_1.Success({ program, uniforms, attributes, activeUniforms, activeAttributes, count });
     })));
 }
 exports.createCommand = createCommand;
@@ -105,58 +105,58 @@ function setUniforms(gl, program, activeUniforms, uniforms) {
                 gl.uniform1f(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.f2:
-                gl.uniform2f(loc, uniform.vector[0], uniform.vector[1]);
+                gl.uniform2f(loc, uniform.value[0], uniform.value[1]);
                 break;
             case UNIFORM_TYPE.f3:
-                gl.uniform3f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]);
+                gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
                 break;
             case UNIFORM_TYPE.f4:
-                gl.uniform4f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]);
+                gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
                 break;
             case UNIFORM_TYPE.i1:
                 gl.uniform1i(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.i2:
-                gl.uniform2i(loc, uniform.vector[0], uniform.vector[1]);
+                gl.uniform2i(loc, uniform.value[0], uniform.value[1]);
                 break;
             case UNIFORM_TYPE.i3:
-                gl.uniform3i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]);
+                gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
                 break;
             case UNIFORM_TYPE.i4:
-                gl.uniform4i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]);
+                gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
                 break;
             case UNIFORM_TYPE.f1v:
-                gl.uniform1fv(loc, uniform.list);
+                gl.uniform1fv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.f2v:
-                gl.uniform2fv(loc, uniform.list);
+                gl.uniform2fv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.f3v:
-                gl.uniform3fv(loc, uniform.list);
+                gl.uniform3fv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.f4v:
-                gl.uniform4fv(loc, uniform.list);
+                gl.uniform4fv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.i1v:
-                gl.uniform1iv(loc, uniform.list);
+                gl.uniform1iv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.i2v:
-                gl.uniform2iv(loc, uniform.list);
+                gl.uniform2iv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.i3v:
-                gl.uniform3iv(loc, uniform.list);
+                gl.uniform3iv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.i4v:
-                gl.uniform4iv(loc, uniform.list);
+                gl.uniform4iv(loc, uniform.value);
                 break;
             case UNIFORM_TYPE.matrix2fv:
-                gl.uniformMatrix2fv(loc, false, uniform.matrices);
+                gl.uniformMatrix2fv(loc, false, uniform.value);
                 break;
             case UNIFORM_TYPE.matrix3fv:
-                gl.uniformMatrix3fv(loc, false, uniform.matrices);
+                gl.uniformMatrix3fv(loc, false, uniform.value);
                 break;
             case UNIFORM_TYPE.matrix4fv:
-                gl.uniformMatrix4fv(loc, false, uniform.matrices);
+                gl.uniformMatrix4fv(loc, false, uniform.value);
                 break;
         }
     }
@@ -837,6 +837,45 @@ const Matrix_1 = require("./Matrix");
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
+function update(b, t) {
+    for (var k in t) {
+        b[k].value = t[k];
+    }
+}
+const b = {
+    age: { value: 5 },
+    position: { value: [1, 2, 3] }
+};
+const current = {
+    age: 5,
+    position: [3, 4, 5]
+};
+const another = {
+    age: 6,
+    position: [1, 2, 3]
+};
+update(b, current);
+console.log(b);
+/*
+  We want to map the spec for a given render call, to the correct type of
+  provided data.  Example below:
+
+  const c = createCommand({ uniforms: { age: { kind: f1, value: 5 }}})
+
+  run(gl, c, { age: 5 })        // OK -- value is number
+  run(gl, c, { age: 'steve'})   // NOT OK -- value is string
+  run(gl, c, { name: 'steve'})  // NOT OK -- name not in keys for command
+  run(gl, c, { age: [ 0, 0 ] }) // NOT OK -- value is 2-tuple
+
+  Each uniform is a wrapper around some type and nothing more.  As such,
+  we need to wrap our raw value in a box and then un-wrap it for
+  the second API.
+*/
+function forPartial(a, b) {
+    console.log('da same');
+}
+//forPartial({ name: 'steve' }, { age: 5 })
+forPartial({ name: 'steve' }, { name: 'kane' });
 Load_1.loadXHR('pyramid.obj')
     .then(OBJ_1.parseOBJ)
     .then(geometry => {
@@ -859,10 +898,10 @@ Load_1.loadXHR('pyramid.obj')
         fsrc: per_vertex_fsrc_1.default,
         count: 12,
         uniforms: {
-            u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: Matrix_1.V3(0, 0, 0) },
-            u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
-            u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() },
-            u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: Matrix_1.M4() }
+            u_light: { kind: Command_1.UNIFORM_TYPE.f3, value: Matrix_1.V3(0, 0, 0) },
+            u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() },
+            u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() },
+            u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: Matrix_1.M4() }
         },
         attributes: {
             a_coord: { kind: Command_1.ATTRIBUTE_TYPE.FLOAT, value: geometry.val.vertices, size: 3 },
@@ -879,7 +918,7 @@ Load_1.loadXHR('pyramid.obj')
         const t = now();
         for (var i = 0; i < entities.length; i++) {
             var entity = entities[i];
-            entity.rotation[1] = Math.cos(t / 5000) * Math.PI * 2;
+            entity.rotation[1] += 0.02;
             Matrix_1.identity(entity.model);
             Matrix_1.translate(entity.model, entity.position);
             Matrix_1.scale(entity.model, entity.scale);
@@ -899,10 +938,10 @@ Load_1.loadXHR('pyramid.obj')
                 Command_1.run(gl, command.value, {
                     count: 12,
                     uniforms: {
-                        u_light: { kind: Command_1.UNIFORM_TYPE.f3, vector: light },
-                        u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: entity.model },
-                        u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: cam.view },
-                        u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, matrices: cam.projection }
+                        u_light: { kind: Command_1.UNIFORM_TYPE.f3, value: light },
+                        u_model: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: entity.model },
+                        u_view: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: cam.view },
+                        u_projection: { kind: Command_1.UNIFORM_TYPE.matrix4fv, value: cam.projection }
                     },
                     attributes: {}
                 });

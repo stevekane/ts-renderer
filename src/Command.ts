@@ -9,6 +9,11 @@ export type Attributes = Block<Attribute>
 export type ActiveUniforms = Block<ActiveUniform>
 export type ActiveAttributes = Block<ActiveAttribute>
 
+export type Indexable = { [ x: string ]: any }
+export type Partial<T> = { [ P in keyof T ]?: T[P] }
+export type Box<T> = { value: T }
+export type Boxified<T> = { [ K in keyof T ]: Box<T[K]> }
+
 export type ATTRIBUTE_SIZE = 1 | 2 | 3 | 4
 export enum ATTRIBUTE_TYPE { BYTE, U_BYTE, SHORT, U_SHORT, FLOAT }
 export enum UNIFORM_TYPE {
@@ -21,24 +26,24 @@ export enum UNIFORM_TYPE {
 
 export type Uniform
   = { kind: UNIFORM_TYPE.f1, value: number }
-  | { kind: UNIFORM_TYPE.f2, vector: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.f3, vector: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.f4, vector: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f2, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f3, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f4, value: number[] | Float32Array }
   | { kind: UNIFORM_TYPE.i1, value: number }
-  | { kind: UNIFORM_TYPE.i2, vector: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.i3, vector: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.i4, vector: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.f1v, list: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.f2v, list: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.f3v, list: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.f4v, list: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.i1v, list: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.i2v, list: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.i3v, list: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.i4v, list: number[] | Int32Array }
-  | { kind: UNIFORM_TYPE.matrix2fv, matrices: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.matrix3fv, matrices: number[] | Float32Array }
-  | { kind: UNIFORM_TYPE.matrix4fv, matrices: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.i2, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i3, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i4, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.f1v, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f2v, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f3v, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.f4v, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.i1v, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i2v, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i3v, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.i4v, value: number[] | Int32Array }
+  | { kind: UNIFORM_TYPE.matrix2fv, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.matrix3fv, value: number[] | Float32Array }
+  | { kind: UNIFORM_TYPE.matrix4fv, value: number[] | Float32Array }
 
 export interface ActiveUniform {
   loc: WebGLUniformLocation
@@ -68,10 +73,8 @@ export interface Config {
   count: number
 }
 
-export interface Command {
+export interface Command extends Config {
   program: WebGLProgram
-  uniforms: Uniforms 
-  attributes: Attributes
   activeUniforms: ActiveUniforms 
   activeAttributes: ActiveAttributes
 }
@@ -97,14 +100,14 @@ export function run (gl: GL, c: Command, cfg: Config) {
 }
 
 export function createCommand<I extends Source & Config> (gl: GL, cfg: I): Either<Command> {
-  const { uniforms, attributes, vsrc, fsrc } = cfg
+  const { count, uniforms, attributes, vsrc, fsrc } = cfg
 
   return flatMap(fromSource(gl, vsrc, fsrc),                    program => 
          flatMap(setupUniforms(gl, program, uniforms),          activeUniforms => 
          flatMap(setupAttributes(gl, program, attributes),      activeAttributes => {
            setUniforms(gl, program, activeUniforms, uniforms)
            setAttributes(gl, program, activeAttributes, attributes)
-           return new Success({ program, uniforms, attributes, activeUniforms, activeAttributes })})))
+           return new Success({ program, uniforms, attributes, activeUniforms, activeAttributes, count })})))
 }
 
 function setupUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>): Either<ActiveUniforms> {
@@ -157,24 +160,24 @@ function setUniforms (gl: GL, program: WebGLProgram, activeUniforms: ActiveUnifo
 
     switch ( uniform.kind ) {
       case UNIFORM_TYPE.f1:        gl.uniform1f(loc, uniform.value); break;
-      case UNIFORM_TYPE.f2:        gl.uniform2f(loc, uniform.vector[0], uniform.vector[1]); break;
-      case UNIFORM_TYPE.f3:        gl.uniform3f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]); break;
-      case UNIFORM_TYPE.f4:        gl.uniform4f(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]); break;
+      case UNIFORM_TYPE.f2:        gl.uniform2f(loc, uniform.value[0], uniform.value[1]); break;
+      case UNIFORM_TYPE.f3:        gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]); break;
+      case UNIFORM_TYPE.f4:        gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]); break;
       case UNIFORM_TYPE.i1:        gl.uniform1i(loc, uniform.value); break;
-      case UNIFORM_TYPE.i2:        gl.uniform2i(loc, uniform.vector[0], uniform.vector[1]); break;
-      case UNIFORM_TYPE.i3:        gl.uniform3i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2]); break;
-      case UNIFORM_TYPE.i4:        gl.uniform4i(loc, uniform.vector[0], uniform.vector[1], uniform.vector[2], uniform.vector[3]); break;
-      case UNIFORM_TYPE.f1v:       gl.uniform1fv(loc, uniform.list); break;
-      case UNIFORM_TYPE.f2v:       gl.uniform2fv(loc, uniform.list); break;
-      case UNIFORM_TYPE.f3v:       gl.uniform3fv(loc, uniform.list); break;
-      case UNIFORM_TYPE.f4v:       gl.uniform4fv(loc, uniform.list); break;
-      case UNIFORM_TYPE.i1v:       gl.uniform1iv(loc, uniform.list); break;
-      case UNIFORM_TYPE.i2v:       gl.uniform2iv(loc, uniform.list); break;
-      case UNIFORM_TYPE.i3v:       gl.uniform3iv(loc, uniform.list); break;
-      case UNIFORM_TYPE.i4v:       gl.uniform4iv(loc, uniform.list); break;
-      case UNIFORM_TYPE.matrix2fv: gl.uniformMatrix2fv(loc, false, uniform.matrices); break;
-      case UNIFORM_TYPE.matrix3fv: gl.uniformMatrix3fv(loc, false, uniform.matrices); break;
-      case UNIFORM_TYPE.matrix4fv: gl.uniformMatrix4fv(loc, false, uniform.matrices); break;
+      case UNIFORM_TYPE.i2:        gl.uniform2i(loc, uniform.value[0], uniform.value[1]); break;
+      case UNIFORM_TYPE.i3:        gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]); break;
+      case UNIFORM_TYPE.i4:        gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]); break;
+      case UNIFORM_TYPE.f1v:       gl.uniform1fv(loc, uniform.value); break;
+      case UNIFORM_TYPE.f2v:       gl.uniform2fv(loc, uniform.value); break;
+      case UNIFORM_TYPE.f3v:       gl.uniform3fv(loc, uniform.value); break;
+      case UNIFORM_TYPE.f4v:       gl.uniform4fv(loc, uniform.value); break;
+      case UNIFORM_TYPE.i1v:       gl.uniform1iv(loc, uniform.value); break;
+      case UNIFORM_TYPE.i2v:       gl.uniform2iv(loc, uniform.value); break;
+      case UNIFORM_TYPE.i3v:       gl.uniform3iv(loc, uniform.value); break;
+      case UNIFORM_TYPE.i4v:       gl.uniform4iv(loc, uniform.value); break;
+      case UNIFORM_TYPE.matrix2fv: gl.uniformMatrix2fv(loc, false, uniform.value); break;
+      case UNIFORM_TYPE.matrix3fv: gl.uniformMatrix3fv(loc, false, uniform.value); break;
+      case UNIFORM_TYPE.matrix4fv: gl.uniformMatrix4fv(loc, false, uniform.value); break;
     }
   }
 }
