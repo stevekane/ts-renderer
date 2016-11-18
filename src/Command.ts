@@ -72,8 +72,8 @@ export function run (gl: GL, c: Command, cfg: Config) {
   // TODO: Same as above for attribtues... I think
   setUniforms(gl, c.program, c.uniformLocations, c.uniforms)
   setUniforms(gl, c.program, c.uniformLocations, cfg.uniforms)
-  // setAttributes(gl, c.program, c.activeAttributes, c.attributes)
-  // setAttributes(gl, c.program, c.activeAttributes, cfg.attributes)
+  setAttributes(gl, c.program, c.attributeLocations, c.buffers, c.attributes)
+  setAttributes(gl, c.program, c.attributeLocations, c.buffers, cfg.attributes)
 
   gl.drawArrays(gl.TRIANGLES, 0, cfg.count)
 
@@ -92,7 +92,7 @@ export function createCommand<I extends Source & Config> (gl: GL, cfg: I): Eithe
          flatMap(locateAttributes(gl, program, attributes),                 attributeLocations =>
          flatMap(setupBuffers(gl, program, attributes, attributeLocations), buffers => {
            setUniforms(gl, program, uniformLocations, uniforms)
-           // setAttributes(gl, program, activeAttributes, attributes)
+           setAttributes(gl, program, attributeLocations, buffers, attributes)
            return new Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count })}))))
 }
 
@@ -136,7 +136,7 @@ function setupBuffers (gl: GL, program: WebGLProgram, attributes: Block<Attribut
     else if ( kind == AttributeType.U_BYTE )  glType = gl.UNSIGNED_BYTE
     else if ( kind == AttributeType.SHORT )   glType = gl.SHORT
     else if ( kind == AttributeType.U_SHORT ) glType = gl.UNSIGNED_SHORT
-    else                                       glType = gl.FLOAT
+    else                                      glType = gl.FLOAT
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.vertexAttribPointer(loc, size, glType, false, stride, offset)

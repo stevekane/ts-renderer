@@ -40,8 +40,8 @@ function run(gl, c, cfg) {
     // TODO: Same as above for attribtues... I think
     setUniforms(gl, c.program, c.uniformLocations, c.uniforms);
     setUniforms(gl, c.program, c.uniformLocations, cfg.uniforms);
-    // setAttributes(gl, c.program, c.activeAttributes, c.attributes)
-    // setAttributes(gl, c.program, c.activeAttributes, cfg.attributes)
+    setAttributes(gl, c.program, c.attributeLocations, c.buffers, c.attributes);
+    setAttributes(gl, c.program, c.attributeLocations, c.buffers, cfg.attributes);
     gl.drawArrays(gl.TRIANGLES, 0, cfg.count);
     for (var key in c.attributeLocations) {
         gl.disableVertexAttribArray(c.attributeLocations[key]);
@@ -53,7 +53,7 @@ function createCommand(gl, cfg) {
     const { count, uniforms, attributes, vsrc, fsrc } = cfg;
     return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(locateUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(locateAttributes(gl, program, attributes), attributeLocations => Either_1.flatMap(setupBuffers(gl, program, attributes, attributeLocations), buffers => {
         setUniforms(gl, program, uniformLocations, uniforms);
-        // setAttributes(gl, program, activeAttributes, attributes)
+        setAttributes(gl, program, attributeLocations, buffers, attributes);
         return new Either_1.Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count });
     }))));
 }
