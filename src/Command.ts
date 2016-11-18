@@ -12,28 +12,28 @@ export type ShaderSrc = string
 
 export type AttributeSize = 1 | 2 | 3 | 4
 export enum AttributeType { BYTE, U_BYTE, SHORT, U_SHORT, FLOAT }
-export enum UniformType { f1, f2, f3, f4, i1, i2, i3, i4, f1v, f2v, f3v, f4v, i1v, i2v, i3v, i4v, mat2, mat3, mat4 }
+export enum UniformType { F, F2, F3, F4, I, I2, I3, I4, FV, FV2, FV3, FV4, IV, IV2, IV3, IV4, MAT2, MAT3, MAT4 }
 
 export type Uniform
-  = { kind: UniformType.f1, value: number }
-  | { kind: UniformType.f2, value: number[] | Float32Array }
-  | { kind: UniformType.f3, value: number[] | Float32Array }
-  | { kind: UniformType.f4, value: number[] | Float32Array }
-  | { kind: UniformType.i1, value: number }
-  | { kind: UniformType.i2, value: number[] | Int32Array }
-  | { kind: UniformType.i3, value: number[] | Int32Array }
-  | { kind: UniformType.i4, value: number[] | Int32Array }
-  | { kind: UniformType.f1v, value: number[] | Float32Array }
-  | { kind: UniformType.f2v, value: number[] | Float32Array }
-  | { kind: UniformType.f3v, value: number[] | Float32Array }
-  | { kind: UniformType.f4v, value: number[] | Float32Array }
-  | { kind: UniformType.i1v, value: number[] | Int32Array }
-  | { kind: UniformType.i2v, value: number[] | Int32Array }
-  | { kind: UniformType.i3v, value: number[] | Int32Array }
-  | { kind: UniformType.i4v, value: number[] | Int32Array }
-  | { kind: UniformType.mat2, value: number[] | Float32Array }
-  | { kind: UniformType.mat3, value: number[] | Float32Array }
-  | { kind: UniformType.mat4, value: number[] | Float32Array }
+  = { kind: UniformType.F, value: number }
+  | { kind: UniformType.F2, value: number[] | Float32Array }
+  | { kind: UniformType.F3, value: number[] | Float32Array }
+  | { kind: UniformType.F4, value: number[] | Float32Array }
+  | { kind: UniformType.I, value: number }
+  | { kind: UniformType.I2, value: number[] | Int32Array }
+  | { kind: UniformType.I3, value: number[] | Int32Array }
+  | { kind: UniformType.I4, value: number[] | Int32Array }
+  | { kind: UniformType.FV, value: number[] | Float32Array }
+  | { kind: UniformType.FV2, value: number[] | Float32Array }
+  | { kind: UniformType.FV3, value: number[] | Float32Array }
+  | { kind: UniformType.FV4, value: number[] | Float32Array }
+  | { kind: UniformType.IV, value: number[] | Int32Array }
+  | { kind: UniformType.IV2, value: number[] | Int32Array }
+  | { kind: UniformType.IV3, value: number[] | Int32Array }
+  | { kind: UniformType.IV4, value: number[] | Int32Array }
+  | { kind: UniformType.MAT2, value: number[] | Float32Array }
+  | { kind: UniformType.MAT3, value: number[] | Float32Array }
+  | { kind: UniformType.MAT4, value: number[] | Float32Array }
 
 export interface Attribute { 
   kind: AttributeType, 
@@ -154,25 +154,25 @@ function setUniforms (gl: GL, program: WebGLProgram, uniformLocations: Block<Web
     const loc = uniformLocations[key]
 
     // switch statement seems to get fucked up here... unsure why.  it cannot see to infer the key to use for discrimination
-    if      ( uniform.kind === UniformType.f1 )   gl.uniform1f(loc, uniform.value)
-    else if ( uniform.kind === UniformType.f2 )   gl.uniform2f(loc, uniform.value[0], uniform.value[1])
-    else if ( uniform.kind === UniformType.f3 )   gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2])
-    else if ( uniform.kind === UniformType.f4 )   gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-    else if ( uniform.kind === UniformType.i1 )   gl.uniform1i(loc, uniform.value)
-    else if ( uniform.kind === UniformType.i2 )   gl.uniform2i(loc, uniform.value[0], uniform.value[1])
-    else if ( uniform.kind === UniformType.i3 )   gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2])
-    else if ( uniform.kind === UniformType.i4 )   gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-    else if ( uniform.kind === UniformType.f1v )  gl.uniform1fv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.f2v )  gl.uniform2fv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.f3v )  gl.uniform3fv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.f4v )  gl.uniform4fv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.i1v )  gl.uniform1iv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.i2v )  gl.uniform2iv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.i3v )  gl.uniform3iv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.i4v )  gl.uniform4iv(loc, uniform.value)
-    else if ( uniform.kind === UniformType.mat2 ) gl.uniformMatrix2fv(loc, false, uniform.value)
-    else if ( uniform.kind === UniformType.mat3 ) gl.uniformMatrix3fv(loc, false, uniform.value)
-    else if ( uniform.kind === UniformType.mat4 ) gl.uniformMatrix4fv(loc, false, uniform.value)
+    if      ( uniform.kind === UniformType.F )    gl.uniform1f(loc, uniform.value)
+    else if ( uniform.kind === UniformType.F2 )   gl.uniform2f(loc, uniform.value[0], uniform.value[1])
+    else if ( uniform.kind === UniformType.F3 )   gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+    else if ( uniform.kind === UniformType.F4 )   gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+    else if ( uniform.kind === UniformType.I )    gl.uniform1i(loc, uniform.value)
+    else if ( uniform.kind === UniformType.I2 )   gl.uniform2i(loc, uniform.value[0], uniform.value[1])
+    else if ( uniform.kind === UniformType.I3 )   gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+    else if ( uniform.kind === UniformType.I4 )   gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+    else if ( uniform.kind === UniformType.FV )   gl.uniform1fv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.FV2 )  gl.uniform2fv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.FV3 )  gl.uniform3fv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.FV4 )  gl.uniform4fv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.IV )   gl.uniform1iv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.IV2 )  gl.uniform2iv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.IV3 )  gl.uniform3iv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.IV4 )  gl.uniform4iv(loc, uniform.value)
+    else if ( uniform.kind === UniformType.MAT2 ) gl.uniformMatrix2fv(loc, false, uniform.value)
+    else if ( uniform.kind === UniformType.MAT3 ) gl.uniformMatrix3fv(loc, false, uniform.value)
+    else if ( uniform.kind === UniformType.MAT4 ) gl.uniformMatrix4fv(loc, false, uniform.value)
   }
 }
 

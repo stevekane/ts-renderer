@@ -11,25 +11,25 @@ var AttributeType;
 })(AttributeType = exports.AttributeType || (exports.AttributeType = {}));
 var UniformType;
 (function (UniformType) {
-    UniformType[UniformType["f1"] = 0] = "f1";
-    UniformType[UniformType["f2"] = 1] = "f2";
-    UniformType[UniformType["f3"] = 2] = "f3";
-    UniformType[UniformType["f4"] = 3] = "f4";
-    UniformType[UniformType["i1"] = 4] = "i1";
-    UniformType[UniformType["i2"] = 5] = "i2";
-    UniformType[UniformType["i3"] = 6] = "i3";
-    UniformType[UniformType["i4"] = 7] = "i4";
-    UniformType[UniformType["f1v"] = 8] = "f1v";
-    UniformType[UniformType["f2v"] = 9] = "f2v";
-    UniformType[UniformType["f3v"] = 10] = "f3v";
-    UniformType[UniformType["f4v"] = 11] = "f4v";
-    UniformType[UniformType["i1v"] = 12] = "i1v";
-    UniformType[UniformType["i2v"] = 13] = "i2v";
-    UniformType[UniformType["i3v"] = 14] = "i3v";
-    UniformType[UniformType["i4v"] = 15] = "i4v";
-    UniformType[UniformType["mat2"] = 16] = "mat2";
-    UniformType[UniformType["mat3"] = 17] = "mat3";
-    UniformType[UniformType["mat4"] = 18] = "mat4";
+    UniformType[UniformType["F"] = 0] = "F";
+    UniformType[UniformType["F2"] = 1] = "F2";
+    UniformType[UniformType["F3"] = 2] = "F3";
+    UniformType[UniformType["F4"] = 3] = "F4";
+    UniformType[UniformType["I"] = 4] = "I";
+    UniformType[UniformType["I2"] = 5] = "I2";
+    UniformType[UniformType["I3"] = 6] = "I3";
+    UniformType[UniformType["I4"] = 7] = "I4";
+    UniformType[UniformType["FV"] = 8] = "FV";
+    UniformType[UniformType["FV2"] = 9] = "FV2";
+    UniformType[UniformType["FV3"] = 10] = "FV3";
+    UniformType[UniformType["FV4"] = 11] = "FV4";
+    UniformType[UniformType["IV"] = 12] = "IV";
+    UniformType[UniformType["IV2"] = 13] = "IV2";
+    UniformType[UniformType["IV3"] = 14] = "IV3";
+    UniformType[UniformType["IV4"] = 15] = "IV4";
+    UniformType[UniformType["MAT2"] = 16] = "MAT2";
+    UniformType[UniformType["MAT3"] = 17] = "MAT3";
+    UniformType[UniformType["MAT4"] = 18] = "MAT4";
 })(UniformType = exports.UniformType || (exports.UniformType = {}));
 function run(gl, c, cfg) {
     gl.useProgram(c.program);
@@ -111,43 +111,43 @@ function setUniforms(gl, program, uniformLocations, uniforms) {
         const uniform = uniforms[key];
         const loc = uniformLocations[key];
         // switch statement seems to get fucked up here... unsure why.  it cannot see to infer the key to use for discrimination
-        if (uniform.kind === UniformType.f1)
+        if (uniform.kind === UniformType.F)
             gl.uniform1f(loc, uniform.value);
-        else if (uniform.kind === UniformType.f2)
+        else if (uniform.kind === UniformType.F2)
             gl.uniform2f(loc, uniform.value[0], uniform.value[1]);
-        else if (uniform.kind === UniformType.f3)
+        else if (uniform.kind === UniformType.F3)
             gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.kind === UniformType.f4)
+        else if (uniform.kind === UniformType.F4)
             gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.kind === UniformType.i1)
+        else if (uniform.kind === UniformType.I)
             gl.uniform1i(loc, uniform.value);
-        else if (uniform.kind === UniformType.i2)
+        else if (uniform.kind === UniformType.I2)
             gl.uniform2i(loc, uniform.value[0], uniform.value[1]);
-        else if (uniform.kind === UniformType.i3)
+        else if (uniform.kind === UniformType.I3)
             gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        else if (uniform.kind === UniformType.i4)
+        else if (uniform.kind === UniformType.I4)
             gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        else if (uniform.kind === UniformType.f1v)
+        else if (uniform.kind === UniformType.FV)
             gl.uniform1fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.f2v)
+        else if (uniform.kind === UniformType.FV2)
             gl.uniform2fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.f3v)
+        else if (uniform.kind === UniformType.FV3)
             gl.uniform3fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.f4v)
+        else if (uniform.kind === UniformType.FV4)
             gl.uniform4fv(loc, uniform.value);
-        else if (uniform.kind === UniformType.i1v)
+        else if (uniform.kind === UniformType.IV)
             gl.uniform1iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.i2v)
+        else if (uniform.kind === UniformType.IV2)
             gl.uniform2iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.i3v)
+        else if (uniform.kind === UniformType.IV3)
             gl.uniform3iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.i4v)
+        else if (uniform.kind === UniformType.IV4)
             gl.uniform4iv(loc, uniform.value);
-        else if (uniform.kind === UniformType.mat2)
+        else if (uniform.kind === UniformType.MAT2)
             gl.uniformMatrix2fv(loc, false, uniform.value);
-        else if (uniform.kind === UniformType.mat3)
+        else if (uniform.kind === UniformType.MAT3)
             gl.uniformMatrix3fv(loc, false, uniform.value);
-        else if (uniform.kind === UniformType.mat4)
+        else if (uniform.kind === UniformType.MAT4)
             gl.uniformMatrix4fv(loc, false, uniform.value);
     }
 }
@@ -828,45 +828,6 @@ const Matrix_1 = require("./Matrix");
 const now = performance ? performance.now.bind(performance) : Date.now;
 const c = document.getElementById('target');
 const gl = c.getContext('webgl');
-function update(b, t) {
-    for (var k in t) {
-        b[k].value = t[k];
-    }
-}
-const b = {
-    age: { value: 5 },
-    position: { value: [1, 2, 3] }
-};
-const current = {
-    age: 5,
-    position: [3, 4, 5]
-};
-const another = {
-    age: 6,
-    position: [1, 2, 3]
-};
-update(b, current);
-console.log(b);
-/*
-  We want to map the spec for a given render call, to the correct type of
-  provided data.  Example below:
-
-  const c = createCommand({ uniforms: { age: { kind: f1, value: 5 }}})
-
-  run(gl, c, { age: 5 })        // OK -- value is number
-  run(gl, c, { age: 'steve'})   // NOT OK -- value is string
-  run(gl, c, { name: 'steve'})  // NOT OK -- name not in keys for command
-  run(gl, c, { age: [ 0, 0 ] }) // NOT OK -- value is 2-tuple
-
-  Each uniform is a wrapper around some type and nothing more.  As such,
-  we need to wrap our raw value in a box and then un-wrap it for
-  the second API.
-*/
-function forPartial(a, b) {
-    console.log('da same');
-}
-//forPartial({ name: 'steve' }, { age: 5 })
-forPartial({ name: 'steve' }, { name: 'kane' });
 Load_1.loadXHR('pyramid.obj')
     .then(OBJ_1.parseOBJ)
     .then(geometry => {
@@ -889,10 +850,10 @@ Load_1.loadXHR('pyramid.obj')
         fsrc: per_vertex_fsrc_1.default,
         count: 12,
         uniforms: {
-            u_light: { kind: Command_1.UniformType.f3, value: Matrix_1.V3(0, 0, 0) },
-            u_model: { kind: Command_1.UniformType.mat4, value: Matrix_1.M4() },
-            u_view: { kind: Command_1.UniformType.mat4, value: Matrix_1.M4() },
-            u_projection: { kind: Command_1.UniformType.mat4, value: Matrix_1.M4() }
+            u_light: { kind: Command_1.UniformType.F3, value: Matrix_1.V3(0, 0, 0) },
+            u_model: { kind: Command_1.UniformType.MAT4, value: Matrix_1.M4() },
+            u_view: { kind: Command_1.UniformType.MAT4, value: Matrix_1.M4() },
+            u_projection: { kind: Command_1.UniformType.MAT4, value: Matrix_1.M4() }
         },
         attributes: {
             a_coord: { kind: Command_1.AttributeType.FLOAT, value: geometry.val.vertices, size: 3 },
@@ -928,10 +889,10 @@ Load_1.loadXHR('pyramid.obj')
                 Command_1.run(gl, command.value, {
                     count: 12,
                     uniforms: {
-                        u_light: { kind: Command_1.UniformType.f3, value: light },
-                        u_model: { kind: Command_1.UniformType.mat4, value: entity.model },
-                        u_view: { kind: Command_1.UniformType.mat4, value: cam.view },
-                        u_projection: { kind: Command_1.UniformType.mat4, value: cam.projection }
+                        u_light: { kind: Command_1.UniformType.F3, value: light },
+                        u_model: { kind: Command_1.UniformType.MAT4, value: entity.model },
+                        u_view: { kind: Command_1.UniformType.MAT4, value: cam.view },
+                        u_projection: { kind: Command_1.UniformType.MAT4, value: cam.projection }
                     },
                     attributes: {}
                 });
