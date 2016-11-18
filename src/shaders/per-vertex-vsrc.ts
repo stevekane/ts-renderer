@@ -28,7 +28,7 @@ void main () {
   float attenuation = 1.0 / (1.0 + (falloff * distance * distance));
   float diffuse = max(dot(MVNormal, light_vector), 0.1) * attenuation;
 
-  v_color = vec4(color[0] * diffuse, color[1] * diffuse, color[2] * diffuse, 1.0);
+  v_color = vec4(color[0] * diffuse, color[1] * diffuse, color[2] * diffuse, color[3]);
   gl_Position = MVP * vec4(a_coord, 1.0);
 }
 `
