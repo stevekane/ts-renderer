@@ -1,13 +1,12 @@
 import { 
-  Parser, unit, failed, fmap, apply, lift, lift3, lift4, flatMap, doThen 
+  Parser, fmap, lift, lift3, lift4, doThen 
 } from './Parser'
 import { 
-  dash, slash, spaces, dot, real, integer, nums, newline, eof,
-  or, orDefault, optional, anyOf, inRange, satisfy,
+  slash, spaces, real, integer, newline,
+  orDefault, optional, anyOf, inRange, satisfy,
   exactly, match, many1, many, atleastN,
   interspersing
 } from './parsers'
-import { isNumber, isAlpha, is } from './predicates'
 import { IGeometry } from '../Rendering/Geometry'
 
 export type V3 = [ number, number, number ]

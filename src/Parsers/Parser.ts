@@ -28,7 +28,7 @@ export function unit<A> (a: A): Parser<A> {
 }
 
 export function failed (msg: string): Parser<string> {
-  return (s: string) => new Err(msg)
+  return (_: string) => new Err(msg)
 }
 
 export function fmap<A, B> (f: (a: A) => B, pa: Parser<A>): Parser<B> {

@@ -1,16 +1,13 @@
 import vsrc from './shaders/per-vertex-vsrc'
 import fsrc from './shaders/per-vertex-fsrc'
 import { loadXHR } from './Load'
-import { GL, run, createCommand, Command, Config, UniformType as U, AttributeType as A } from './Command'
-import { IRenderable } from './Rendering/core'
-import { ILookAtCamera } from './Rendering/Camera'
+import { run, createCommand, UniformType as U, AttributeType as A } from './Command'
 import { parseOBJ } from './Parsers/OBJ'
 import { 
-  Vec3, V3, M4, lookAt, identity, perspective, 
+  V3, M4, lookAt, identity, perspective, 
   translate, scale, rotateX, rotateY, rotateZ 
 } from './Matrix'
 
-const now = performance ? performance.now.bind(performance) : Date.now
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
 
@@ -55,8 +52,6 @@ loadXHR('pyramid.obj')
   }]
 
   requestAnimationFrame(function render () {
-    const t = now()
-
     for ( const entity of entities ) {
       entity.rotation[1] += 0.02
       identity(entity.model)
