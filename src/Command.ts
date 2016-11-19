@@ -1,4 +1,4 @@
-import { Either, fmap, flatMap, Success, Failure, unit } from './Either'
+import { Either, flatMap, Success, Failure } from './Either'
 
 export type Block<T> = { [ name: string ]: T }
 export type Indexable = { [ x: string ]: any }
@@ -82,51 +82,14 @@ export interface Command extends Config {
   buffers: Block<WebGLBuffer>
 }
 
-/*
-const command = {
-  count: number,
-  program: program,
-  uniforms: {
-    matrix: { kind: MAT4, value: M4 },
-    val: { kind: F, value: number }
-  },
-  uniformLocations: {
-    matrix: 0,
-    val: 1
-  },
-  attributes: {
-    position: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 },
-    color: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 }
-  },
-  attributeLocations: {
-    position: 0,
-    color: 1
-  },
-  buffers: {
-    position: Buffer
-    color: Buffer
-  }
-}
-
-const props = {
-  // UNIFORMS is a partialboxified of T where T is the uniforms value 
-  uniforms: {
-    matrix: [ ... ], IF THIS IS VALUE T, then command is Box<T> for this same key
-  },
-  attributes: {
-    position: [ 2, 2, 2 ],
-  }
-}
-*/
-
 export function run (gl: GL, c: Command, cfg: Config) {
   gl.useProgram(c.program)
   gl.enable(gl.DEPTH_TEST)
   gl.enable(gl.CULL_FACE)
   gl.depthFunc(gl.LEQUAL)
 
-  for ( const key in c.uniforms )   setUniform(gl, c.program, c.uniformLocations[key], cfg.uniforms[key] || c.uniforms[key])
-  for ( const key in c.attributes ) setAttribute(gl, c.program, c.attributeLocations[key], c.buffers[key], cfg.attributes[key] || c.attributes[key])
+  for ( const key in c.uniforms )   setUniform(gl, c.uniformLocations[key], cfg.uniforms[key] || c.uniforms[key])
+  for ( const key in c.attributes ) setAttribute(gl, c.attributeLocations[key], c.buffers[key], cfg.attributes[key] || c.attributes[key])
 
   gl.drawArrays(gl.TRIANGLES, 0, cfg.count)
 
@@ -141,9 +104,9 @@ export function createCommand<I extends Source & Config> (gl: GL, cfg: I): Eithe
   return flatMap(fromSource(gl, vsrc, fsrc),                                program => 
          flatMap(locateUniforms(gl, program, uniforms),                     uniformLocations => 
          flatMap(locateAttributes(gl, program, attributes),                 attributeLocations =>
-         flatMap(setupBuffers(gl, program, attributes, attributeLocations), buffers => {
-           for ( const key in uniforms )   setUniform(gl, program, uniformLocations[key], uniforms[key])
-           for ( const key in attributes ) setAttribute(gl, program, attributeLocations[key], buffers[key], attributes[key]) 
+         flatMap(setupBuffers(gl, attributes, attributeLocations), buffers => {
+           for ( const key in uniforms )   setUniform(gl, uniformLocations[key], uniforms[key])
+           for ( const key in attributes ) setAttribute(gl, attributeLocations[key], buffers[key], attributes[key]) 
            return new Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count })}))))
 }
 
@@ -151,7 +114,6 @@ function locateUniforms (gl: GL, program: WebGLProgram, uniforms: Block<Uniform>
   const out: Block<WebGLUniformLocation>= {}
 
   for ( const name in uniforms ) {
-    const uniform = uniforms[name]
     const loc = gl.getUniformLocation(program, name) 
 
     if ( loc == null ) return new Failure(`Could not find location for ${ name }`)
@@ -172,22 +134,28 @@ function locateAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attr
   return new Success(out)
 }
 
-function setupBuffers (gl: GL, program: WebGLProgram, attributes: Block<Attribute>, attributeLocations: Block<number>): Either<Block<WebGLBuffer>> {
+function mapToGLType ( gl: GL, t: AttributeType ): number {
+  switch ( t ) {
+    case AttributeType.BYTE:    return gl.BYTE 
+    case AttributeType.U_BYTE:  return gl.UNSIGNED_BYTE 
+    case AttributeType.SHORT:   return gl.SHORT
+    case AttributeType.U_SHORT: return gl.UNSIGNED_SHORT
+    case AttributeType.FLOAT:   return gl.FLOAT 
+    default:                    const check: never = t
+                                return check
+  } 
+}
+ 
+function setupBuffers (gl: GL, attributes: Block<Attribute>, attributeLocations: Block<number>): Either<Block<WebGLBuffer>> {
   const out: Block<WebGLBuffer> = {}
 
   for ( const name in attributes ) {
     const { kind, size, offset = 0, stride = 0 } = attributes[name]
+    const glType = mapToGLType(gl, kind)
     const loc = attributeLocations[name]
     const buffer = gl.createBuffer()
 
     if ( buffer == null ) return new Failure('Could not create buffer')
-
-    var glType: number
-    if      ( kind == AttributeType.BYTE )    glType = gl.BYTE
-    else if ( kind == AttributeType.U_BYTE )  glType = gl.UNSIGNED_BYTE
-    else if ( kind == AttributeType.SHORT )   glType = gl.SHORT
-    else if ( kind == AttributeType.U_SHORT ) glType = gl.UNSIGNED_SHORT
-    else                                      glType = gl.FLOAT
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.vertexAttribPointer(loc, size, glType, false, stride, offset)
@@ -199,29 +167,33 @@ function setupBuffers (gl: GL, program: WebGLProgram, attributes: Block<Attribut
   return new Success(out)
 }
 
-function setUniform (gl: GL, program: WebGLProgram, loc: WebGLUniformLocation, uniform: Uniform) {
-  if      ( uniform.kind === UniformType.F )    gl.uniform1f(loc, uniform.value)
-  else if ( uniform.kind === UniformType.F2 )   gl.uniform2f(loc, uniform.value[0], uniform.value[1])
-  else if ( uniform.kind === UniformType.F3 )   gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2])
-  else if ( uniform.kind === UniformType.F4 )   gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-  else if ( uniform.kind === UniformType.I )    gl.uniform1i(loc, uniform.value)
-  else if ( uniform.kind === UniformType.I2 )   gl.uniform2i(loc, uniform.value[0], uniform.value[1])
-  else if ( uniform.kind === UniformType.I3 )   gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2])
-  else if ( uniform.kind === UniformType.I4 )   gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
-  else if ( uniform.kind === UniformType.FV )   gl.uniform1fv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.FV2 )  gl.uniform2fv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.FV3 )  gl.uniform3fv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.FV4 )  gl.uniform4fv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.IV )   gl.uniform1iv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.IV2 )  gl.uniform2iv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.IV3 )  gl.uniform3iv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.IV4 )  gl.uniform4iv(loc, uniform.value)
-  else if ( uniform.kind === UniformType.MAT2 ) gl.uniformMatrix2fv(loc, false, uniform.value)
-  else if ( uniform.kind === UniformType.MAT3 ) gl.uniformMatrix3fv(loc, false, uniform.value)
-  else if ( uniform.kind === UniformType.MAT4 ) gl.uniformMatrix4fv(loc, false, uniform.value)
+function setUniform (gl: GL, loc: WebGLUniformLocation, uniform: Uniform) {
+  switch ( uniform.kind ) {
+    case UniformType.F:    return gl.uniform1f(loc, uniform.value) 
+    case UniformType.F2:   return gl.uniform2f(loc, uniform.value[0], uniform.value[1]) 
+    case UniformType.F3:   return gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+    case UniformType.F4:   return gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+    case UniformType.I:    return gl.uniform1i(loc, uniform.value)
+    case UniformType.I2:   return gl.uniform2i(loc, uniform.value[0], uniform.value[1])
+    case UniformType.I3:   return gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+    case UniformType.I4:   return gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+    case UniformType.FV:   return gl.uniform1fv(loc, uniform.value)
+    case UniformType.FV2:  return gl.uniform2fv(loc, uniform.value)
+    case UniformType.FV3:  return gl.uniform3fv(loc, uniform.value)
+    case UniformType.FV4:  return gl.uniform4fv(loc, uniform.value)
+    case UniformType.IV:   return gl.uniform1iv(loc, uniform.value)
+    case UniformType.IV2:  return gl.uniform2iv(loc, uniform.value)
+    case UniformType.IV3:  return gl.uniform3iv(loc, uniform.value)
+    case UniformType.IV4:  return gl.uniform4iv(loc, uniform.value)
+    case UniformType.MAT2: return gl.uniformMatrix2fv(loc, false, uniform.value)
+    case UniformType.MAT3: return gl.uniformMatrix3fv(loc, false, uniform.value)
+    case UniformType.MAT4: return gl.uniformMatrix4fv(loc, false, uniform.value)
+    default:               const check: never = uniform
+                           return check
+  }
 }
 
-function setAttribute (gl: GL, program: WebGLProgram, loc: WebGLAttributeLocation, buffer: WebGLBuffer, attribute: Attribute) {
+function setAttribute (gl: GL, loc: WebGLAttributeLocation, buffer: WebGLBuffer, attribute: Attribute) {
   const { value } = attribute
   const content = value instanceof Float32Array ? value : new Float32Array(value)
 

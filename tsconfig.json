@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
     "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallThroughCasesInSwitch": true,
     "noImplicitAny": true,
+    "noImplicityReturns": true,
+    "noImplicitThis": true,
     "target": "es6"
   },
   "exclude": [
