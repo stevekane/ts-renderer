@@ -1,6 +1,23 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 const Either_1 = require("./Either");
+const cfg = {
+    age: { value: 5 },
+    position: { value: [1, 1, 1] }
+};
+const part = {
+    age: 5,
+    position: [2, 2, 2]
+};
+function sec(w, p) {
+    for (const key in w) {
+        if (p[key])
+            console.log(`Found an updated ${key}`);
+        else
+            console.log(`Using default ${key}`);
+    }
+}
+sec(cfg, part);
 var AttributeType;
 (function (AttributeType) {
     AttributeType[AttributeType["BYTE"] = 0] = "BYTE";
@@ -31,6 +48,42 @@ var UniformType;
     UniformType[UniformType["MAT3"] = 17] = "MAT3";
     UniformType[UniformType["MAT4"] = 18] = "MAT4";
 })(UniformType = exports.UniformType || (exports.UniformType = {}));
+/*
+const command = {
+  count: number,
+  program: program,
+  uniforms: {
+    matrix: { kind: MAT4, value: M4 },
+    val: { kind: F, value: number }
+  },
+  uniformLocations: {
+    matrix: 0,
+    val: 1
+  },
+  attributes: {
+    position: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 },
+    color: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 }
+  },
+  attributeLocations: {
+    position: 0,
+    color: 1
+  },
+  buffers: {
+    position: Buffer
+    color: Buffer
+  }
+}
+
+const props = {
+  // UNIFORMS is a partialboxified of T where T is the uniforms value
+  uniforms: {
+    matrix: [ ... ], IF THIS IS VALUE T, then command is Box<T> for this same key
+  },
+  attributes: {
+    position: [ 2, 2, 2 ],
+  }
+}
+*/
 function run(gl, c, cfg) {
     gl.useProgram(c.program);
     gl.enable(gl.DEPTH_TEST);

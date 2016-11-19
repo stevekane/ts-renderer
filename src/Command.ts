@@ -5,7 +5,26 @@ export type Indexable = { [ x: string ]: any }
 export type Box<T> = { value: T }
 export type Boxified<T extends Indexable> = { [ K in keyof T ]: Box<T[K]> }
 export type Partial<T extends Indexable> = { [ K in keyof T ]?: T[K] }
-export type PartialBoxifed<T extends Indexable> = { [ K in keyof T ]?: Box<T[K]> }
+
+const cfg = {
+  age: { value: 5 },
+  position: { value: [ 1, 1, 1 ] }
+}
+
+const part = {
+  age: 5,
+  position: [ 2, 2, 2 ]
+}
+
+function sec <P extends Indexable> (w: Boxified<P>, p: P) {
+  for ( const key in w ) {
+    if ( p[key] ) console.log(`Found an updated ${ key }`)
+    else          console.log(`Using default ${ key }`)
+  }
+}
+
+sec(cfg, part)
+// sec(cfg, 7)
 
 export type GL = WebGLRenderingContext
 export type WebGLAttributeLocation = number
@@ -62,6 +81,43 @@ export interface Command extends Config {
   attributeLocations: Block<WebGLAttributeLocation>
   buffers: Block<WebGLBuffer>
 }
+
+/*
+const command = {
+  count: number,
+  program: program,
+  uniforms: {
+    matrix: { kind: MAT4, value: M4 },
+    val: { kind: F, value: number }
+  },
+  uniformLocations: {
+    matrix: 0,
+    val: 1
+  },
+  attributes: {
+    position: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 },
+    color: { kind: FLOAT, value: [ 1, 1, 1 ], size: 3 }
+  },
+  attributeLocations: {
+    position: 0,
+    color: 1
+  },
+  buffers: {
+    position: Buffer
+    color: Buffer
+  }
+}
+
+const props = {
+  // UNIFORMS is a partialboxified of T where T is the uniforms value 
+  uniforms: {
+    matrix: [ ... ], IF THIS IS VALUE T, then command is Box<T> for this same key
+  },
+  attributes: {
+    position: [ 2, 2, 2 ],
+  }
+}
+*/
 
 export function run (gl: GL, c: Command, cfg: Config) {
   gl.useProgram(c.program)
