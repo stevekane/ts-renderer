@@ -53,44 +53,54 @@ function run(gl, c, cfg) {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.depthFunc(gl.LEQUAL);
-    for (const key in c.uniforms)
-        setUniform(gl, c.uniformLocations[key], cfg.uniforms[key] || c.uniforms[key]);
-    for (const key in c.attributes)
-        setAttribute(gl, c.attributeLocations[key], c.buffers[key], cfg.attributes[key] || c.attributes[key]);
-    gl.drawArrays(gl.TRIANGLES, 0, cfg.count);
-    for (const key in c.attributeLocations)
-        gl.disableVertexAttribArray(c.attributeLocations[key]);
+    cfg;
+    // for ( const key in c.uniforms )   setUniform(gl, c.uniformLocations[key], cfg.uniforms[key] || c.uniforms[key])
+    // for ( const key in c.attributes ) setAttribute(gl, c.attributeLocations[key], c.buffers[key], cfg.attributes[key] || c.attributes[key])
+    // gl.drawArrays(gl.TRIANGLES, 0, cfg.count)
+    // for ( const key in c.attributeLocations ) gl.disableVertexAttribArray(c.attributeLocations[key])
     gl.useProgram(null);
 }
 exports.run = run;
 function createCommand(gl, cfg) {
-    const { count, uniforms, attributes, vsrc, fsrc } = cfg;
-    return Either_1.flatMap(fromSource(gl, vsrc, fsrc), program => Either_1.flatMap(locateUniforms(gl, program, uniforms), uniformLocations => Either_1.flatMap(locateAttributes(gl, program, attributes), attributeLocations => Either_1.flatMap(setupBuffers(gl, attributes, attributeLocations), buffers => {
-        for (const key in uniforms)
-            setUniform(gl, uniformLocations[key], uniforms[key]);
-        for (const key in attributes)
-            setAttribute(gl, attributeLocations[key], buffers[key], attributes[key]);
-        return new Either_1.Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count });
-    }))));
+    return Either_1.flatMap(fromSource(gl, cfg.vsrc, cfg.fsrc), program => Either_1.flatMap(createUniforms(gl, program, cfg.uniforms), uniforms => Either_1.flatMap(createAttributes(gl, program, cfg.attributes), attributes => {
+        return new Either_1.Success({ program, uniforms, attributes, count: cfg.count });
+    })));
+    // flatMap(locateUniforms(gl, program, uniforms),            uniformLocations => 
+    // flatMap(locateAttributes(gl, program, attributes),        attributeLocations =>
+    // flatMap(setupBuffers(gl, attributes, attributeLocations), buffers => {
+    //   for ( const key in uniforms )   setUniform(gl, uniformLocations[key], uniforms[key])
+    //   for ( const key in attributes ) setAttribute(gl, attributeLocations[key], buffers[key], attributes[key]) 
+    //   return new Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count })}))))
 }
 exports.createCommand = createCommand;
-function locateUniforms(gl, program, uniforms) {
+function createUniforms(gl, program, uniforms) {
     const out = {};
     for (const name in uniforms) {
+        const kind = uniforms[name].kind;
         const loc = gl.getUniformLocation(program, name);
         if (loc == null)
             return new Either_1.Failure(`Could not find location for ${name}`);
-        out[name] = loc;
+        else
+            out[name] = { loc, kind };
     }
     return new Either_1.Success(out);
 }
-function locateAttributes(gl, program, attributes) {
+function createAttributes(gl, program, attributes) {
     const out = {};
     for (const name in attributes) {
+        const { kind, size, offset = 0, stride = 0 } = attributes[name];
         const loc = gl.getAttribLocation(program, name);
+        const glType = mapToGLType(gl, kind);
+        const buffer = gl.createBuffer();
         if (loc == null)
             return new Either_1.Failure(`Could not find attribute ${name}`);
-        out[name] = loc;
+        if (buffer == null)
+            return new Either_1.Failure('Could not create buffer');
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.vertexAttribPointer(loc, size, glType, false, stride, offset);
+        gl.enableVertexAttribArray(loc);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        out[name] = { kind, loc, buffer };
     }
     return new Either_1.Success(out);
 }
@@ -106,56 +116,41 @@ function mapToGLType(gl, t) {
             return check;
     }
 }
-function setupBuffers(gl, attributes, attributeLocations) {
-    const out = {};
-    for (const name in attributes) {
-        const { kind, size, offset = 0, stride = 0 } = attributes[name];
-        const glType = mapToGLType(gl, kind);
-        const loc = attributeLocations[name];
-        const buffer = gl.createBuffer();
-        if (buffer == null)
-            return new Either_1.Failure('Could not create buffer');
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.vertexAttribPointer(loc, size, glType, false, stride, offset);
-        gl.enableVertexAttribArray(loc);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        out[name] = buffer;
-    }
-    return new Either_1.Success(out);
-}
-function setUniform(gl, loc, uniform) {
-    switch (uniform.kind) {
-        case UniformType.F: return gl.uniform1f(loc, uniform.value);
-        case UniformType.F2: return gl.uniform2f(loc, uniform.value[0], uniform.value[1]);
-        case UniformType.F3: return gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        case UniformType.F4: return gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        case UniformType.I: return gl.uniform1i(loc, uniform.value);
-        case UniformType.I2: return gl.uniform2i(loc, uniform.value[0], uniform.value[1]);
-        case UniformType.I3: return gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2]);
-        case UniformType.I4: return gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3]);
-        case UniformType.FV: return gl.uniform1fv(loc, uniform.value);
-        case UniformType.FV2: return gl.uniform2fv(loc, uniform.value);
-        case UniformType.FV3: return gl.uniform3fv(loc, uniform.value);
-        case UniformType.FV4: return gl.uniform4fv(loc, uniform.value);
-        case UniformType.IV: return gl.uniform1iv(loc, uniform.value);
-        case UniformType.IV2: return gl.uniform2iv(loc, uniform.value);
-        case UniformType.IV3: return gl.uniform3iv(loc, uniform.value);
-        case UniformType.IV4: return gl.uniform4iv(loc, uniform.value);
-        case UniformType.MAT2: return gl.uniformMatrix2fv(loc, false, uniform.value);
-        case UniformType.MAT3: return gl.uniformMatrix3fv(loc, false, uniform.value);
-        case UniformType.MAT4: return gl.uniformMatrix4fv(loc, false, uniform.value);
-        default:
-            const check = uniform;
-            return check;
-    }
-}
-function setAttribute(gl, loc, buffer, attribute) {
-    const { value } = attribute;
-    const content = value instanceof Float32Array ? value : new Float32Array(value);
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(loc);
-}
+// function setUniform (gl: GL, loc: WebGLUniformLocation, uniform: Uniform) {
+//   switch ( uniform.kind ) {
+//     case UniformType.F:    return gl.uniform1f(loc, uniform.value) 
+//     case UniformType.F2:   return gl.uniform2f(loc, uniform.value[0], uniform.value[1]) 
+//     case UniformType.F3:   return gl.uniform3f(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+//     case UniformType.F4:   return gl.uniform4f(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+//     case UniformType.I:    return gl.uniform1i(loc, uniform.value)
+//     case UniformType.I2:   return gl.uniform2i(loc, uniform.value[0], uniform.value[1])
+//     case UniformType.I3:   return gl.uniform3i(loc, uniform.value[0], uniform.value[1], uniform.value[2])
+//     case UniformType.I4:   return gl.uniform4i(loc, uniform.value[0], uniform.value[1], uniform.value[2], uniform.value[3])
+//     case UniformType.FV:   return gl.uniform1fv(loc, uniform.value)
+//     case UniformType.FV2:  return gl.uniform2fv(loc, uniform.value)
+//     case UniformType.FV3:  return gl.uniform3fv(loc, uniform.value)
+//     case UniformType.FV4:  return gl.uniform4fv(loc, uniform.value)
+//     case UniformType.IV:   return gl.uniform1iv(loc, uniform.value)
+//     case UniformType.IV2:  return gl.uniform2iv(loc, uniform.value)
+//     case UniformType.IV3:  return gl.uniform3iv(loc, uniform.value)
+//     case UniformType.IV4:  return gl.uniform4iv(loc, uniform.value)
+//     case UniformType.MAT2: return gl.uniformMatrix2fv(loc, false, uniform.value)
+//     case UniformType.MAT3: return gl.uniformMatrix3fv(loc, false, uniform.value)
+//     case UniformType.MAT4: return gl.uniformMatrix4fv(loc, false, uniform.value)
+//     default:               const check: never = uniform
+//                            return check
+//   }
+// }
+// 
+// // TODO: Not really correct.  byte and short ( int ) handling is not handled properly
+// function setAttribute (gl: GL, loc: WebGLAttributeLocation, buffer: WebGLBuffer, attribute: Attribute) {
+//   const { value } = attribute
+//   const content = value instanceof Float32Array ? value : new Float32Array(value)
+// 
+//   gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+//   gl.bufferData(gl.ARRAY_BUFFER, content, gl.DYNAMIC_DRAW)
+//   gl.enableVertexAttribArray(loc)
+// }
 function compileShader(gl, kind, src) {
     const shader = gl.createShader(kind);
     const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
@@ -875,16 +870,15 @@ Load_1.loadXHR('pyramid.obj')
         gl.viewport(0, 0, c.width, c.height);
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        for (var i = 0; i < entities.length; i++) {
-            var entity = entities[i];
+        for (const entity of entities) {
             if (command.success)
                 Command_1.run(gl, command.value, {
                     count: 12,
                     uniforms: {
-                        u_light: { kind: Command_1.UniformType.F3, value: light },
-                        u_model: { kind: Command_1.UniformType.MAT4, value: entity.model },
-                        u_view: { kind: Command_1.UniformType.MAT4, value: cam.view },
-                        u_projection: { kind: Command_1.UniformType.MAT4, value: cam.projection }
+                        u_light: light,
+                        u_model: entity.model,
+                        u_view: cam.view,
+                        u_projection: cam.projection
                     },
                     attributes: {}
                 });

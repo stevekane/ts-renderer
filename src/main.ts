@@ -70,15 +70,14 @@ loadXHR('pyramid.obj')
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-    for ( var i = 0; i < entities.length; i++ ) {
-      var entity = entities[i]
+    for ( const entity of entities ) {
       if ( command.success ) run(gl, command.value, { 
         count: 12,
         uniforms: {
-          u_light: { kind: U.F3, value: light },
-          u_model: { kind: U.MAT4, value: entity.model },
-          u_view: { kind: U.MAT4, value: cam.view },
-          u_projection: { kind: U.MAT4, value: cam.projection }
+          u_light: light,
+          u_model: entity.model,
+          u_view: cam.view,
+          u_projection: cam.projection
         },
         attributes: {}
       })
