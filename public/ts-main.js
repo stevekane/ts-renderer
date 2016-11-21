@@ -1,23 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 const Either_1 = require("./Either");
-const cfg = {
-    age: { value: 5 },
-    position: { value: [1, 1, 1] }
-};
-const part = {
-    age: 5,
-    position: [2, 2, 2]
-};
-function sec(w, p) {
-    for (const key in w) {
-        if (p[key])
-            console.log(`Found an updated ${key}`);
-        else
-            console.log(`Using default ${key}`);
-    }
-}
-sec(cfg, part);
 var AttributeType;
 (function (AttributeType) {
     AttributeType[AttributeType["BYTE"] = 0] = "BYTE";
@@ -48,6 +31,29 @@ var UniformType;
     UniformType[UniformType["MAT3"] = 17] = "MAT3";
     UniformType[UniformType["MAT4"] = 18] = "MAT4";
 })(UniformType = exports.UniformType || (exports.UniformType = {}));
+function forMatches(u, v) {
+    console.log(u);
+    console.log(v);
+}
+function single(item) {
+    console.log(item);
+}
+function objOf(t) {
+    console.log(t);
+}
+// const t = { tag: 'F' }
+const t2 = { tag: 'F' };
+const o = { age: t2 };
+// single(t)
+single(t2);
+objOf(o);
+const uInitial = {
+    age: { kind: 'F', value: 3 },
+};
+const uCurrent = {
+    age: 2,
+};
+forMatches(uInitial, uCurrent);
 function run(gl, c, cfg) {
     gl.useProgram(c.program);
     gl.enable(gl.DEPTH_TEST);
@@ -845,7 +851,7 @@ Load_1.loadXHR('pyramid.obj')
         },
         attributes: {
             a_coord: { kind: Command_1.AttributeType.FLOAT, value: geometry.val.vertices, size: 3 },
-            a_normal: { kind: Command_1.AttributeType.FLOAT, value: geometry.val.normals, size: 3 },
+            a_normal: { kind: Command_1.AttributeType.FLOAT, value: geometry.val.normals, size: 3 }
         }
     });
     const entities = [{

@@ -5,26 +5,6 @@ export type Indexable = { [ x: string ]: any }
 export type Box<T> = { value: T }
 export type Boxified<T extends Indexable> = { [ K in keyof T ]: Box<T[K]> }
 export type Partial<T extends Indexable> = { [ K in keyof T ]?: T[K] }
-
-const cfg = {
-  age: { value: 5 },
-  position: { value: [ 1, 1, 1 ] }
-}
-
-const part = {
-  age: 5,
-  position: [ 2, 2, 2 ]
-}
-
-function sec<P extends Indexable> (w: Boxified<P>, p: P) {
-  for ( const key in w ) {
-    if ( p[key] ) console.log(`Found an updated ${ key }`)
-    else          console.log(`Using default ${ key }`)
-  }
-}
-
-sec(cfg, part)
-
 export type GL = WebGLRenderingContext
 export type WebGLAttributeLocation = number
 export type ShaderSrc = string
@@ -32,6 +12,65 @@ export type ShaderSrc = string
 export type AttributeSize = 1 | 2 | 3 | 4
 export enum AttributeType { BYTE, U_BYTE, SHORT, U_SHORT, FLOAT }
 export enum UniformType { F, F2, F3, F4, I, I2, I3, I4, FV, FV2, FV3, FV4, IV, IV2, IV3, IV4, MAT2, MAT3, MAT4 }
+export type Floats = number[] | Float32Array
+export type Ints = number[] | Int32Array
+
+type UT
+  = { kind: 'F', value?: number }
+  | { kind: 'F2', value?: Floats }
+  | { kind: 'F3', value?: Floats }
+  | { kind: 'F4', value?: Floats }
+  | { kind: 'I', value?: number }
+  | { kind: 'I2', value?: Ints }
+  | { kind: 'I3', value?: Ints }
+  | { kind: 'I4', value?: Ints }
+  | { kind: 'FV', value?: Floats }
+  | { kind: 'FV2', value?: Floats }
+  | { kind: 'FV3', value?: Floats }
+  | { kind: 'FV4', value?: Floats }
+  | { kind: 'IV', value?: Ints }
+  | { kind: 'IV2', value?: Ints }
+  | { kind: 'IV3', value?: Ints }
+  | { kind: 'IV4', value?: Ints }
+  | { kind: 'MAT2', value?: Floats }
+  | { kind: 'MAT3', value?: Floats }
+  | { kind: 'MAT4', value?: Floats }
+
+function forMatches
+<T,
+ V extends Block<T>,
+ U extends { [ K in keyof V ]: UT }>
+( u: U, v: V ) {
+  console.log(u)
+  console.log(v)
+}
+
+type Item = { tag: 'F' }
+
+function single ( item: Item ) {
+  console.log(item)
+}
+
+function objOf <T extends { [ x: string ]: Item }> ( t: T ) {
+  console.log(t)
+}
+
+// const t = { tag: 'F' }
+const t2 = <Item>{ tag: 'F' }
+const o = { age: t2 }
+
+// single(t)
+single(t2)
+objOf(o)
+
+const uInitial = {
+  age: <UT>{ kind: 'F', value: 3 },
+}
+const uCurrent = {
+  age: 2,
+}
+
+forMatches(uInitial, uCurrent)
 
 export type UniformConfig
   = { kind: UniformType.F, value: number }
@@ -55,7 +94,7 @@ export type UniformConfig
   | { kind: UniformType.MAT4, value: number[] | Float32Array }
 
 export type Uniform = { 
-  kind: UniformType, 
+  kind: UniformType,
   loc: WebGLUniformLocation
 }
 
@@ -105,7 +144,7 @@ export function run (gl: GL, c: Command, cfg: Indexable) {
   gl.useProgram(null)
 }
 
-export function createCommand (gl: GL, cfg: Config): Either<Command> {
+export function createCommand ( gl: GL, cfg: Config ): Either<Command> {
   return flatMap(fromSource(gl, cfg.vsrc, cfg.fsrc),            program => 
          flatMap(createUniforms(gl, program, cfg.uniforms),     uniforms =>
          flatMap(createAttributes(gl, program, cfg.attributes), attributes => {
@@ -118,7 +157,7 @@ export function createCommand (gl: GL, cfg: Config): Either<Command> {
          //   return new Success({ program, uniforms, attributes, uniformLocations, attributeLocations, buffers, count })}))))
 }
 
-function createUniforms (gl: GL, program: WebGLProgram, uniforms: Block<UniformConfig>): Either<Block<Uniform>> {
+function createUniforms ( gl: GL, program: WebGLProgram, uniforms: Block<UniformConfig> ): Either<Block<Uniform>> {
   const out: Block<Uniform> = {}
 
   for ( const name in uniforms ) {
@@ -131,7 +170,7 @@ function createUniforms (gl: GL, program: WebGLProgram, uniforms: Block<UniformC
   return new Success(out)
 }
 
-function createAttributes (gl: GL, program: WebGLProgram, attributes: Block<AttributeConfig>): Either<Block<Attribute>> {
+function createAttributes ( gl: GL, program: WebGLProgram, attributes: Block<AttributeConfig> ): Either<Block<Attribute>> {
   const out: Block<Attribute> = {}
 
   for ( const name in attributes ) {
@@ -152,7 +191,7 @@ function createAttributes (gl: GL, program: WebGLProgram, attributes: Block<Attr
   return new Success(out)
 }
 
-function mapToGLType (gl: GL, t: AttributeType): number {
+function mapToGLType ( gl: GL, t: AttributeType ): number {
   switch ( t ) {
     case AttributeType.BYTE:    return gl.BYTE 
     case AttributeType.U_BYTE:  return gl.UNSIGNED_BYTE 
@@ -200,7 +239,7 @@ function mapToGLType (gl: GL, t: AttributeType): number {
 //   gl.enableVertexAttribArray(loc)
 // }
 
-function compileShader (gl: GL, kind: number, src: string): Either<WebGLShader> {
+function compileShader ( gl: GL, kind: number, src: string ): Either<WebGLShader> {
   const shader = gl.createShader(kind)
   const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT'
 
@@ -211,7 +250,7 @@ function compileShader (gl: GL, kind: number, src: string): Either<WebGLShader> 
     : new Failure(`${ kindStr }: ${ gl.getShaderInfoLog(shader) || '' }`)
 }
 
-function linkProgram (gl: GL, vertex: WebGLShader, fragment: WebGLShader): Either<WebGLProgram> {
+function linkProgram ( gl: GL, vertex: WebGLShader, fragment: WebGLShader ): Either<WebGLProgram> {
   const program = gl.createProgram()
 
   gl.attachShader(program, vertex)
@@ -223,7 +262,7 @@ function linkProgram (gl: GL, vertex: WebGLShader, fragment: WebGLShader): Eithe
     : new Failure(gl.getProgramInfoLog(program) || '')
 }
 
-function fromSource (gl: GL, vsrc: string, fsrc: string): Either<WebGLProgram> {
+function fromSource ( gl: GL, vsrc: ShaderSrc, fsrc: ShaderSrc ): Either<WebGLProgram> {
   return flatMap(compileShader(gl, gl.VERTEX_SHADER, vsrc),   vertex =>
          flatMap(compileShader(gl, gl.FRAGMENT_SHADER, fsrc), fragment =>
          linkProgram(gl, vertex, fragment)))

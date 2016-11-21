@@ -40,8 +40,7 @@ loadXHR('pyramid.obj')
     },
     attributes: {
       a_coord: { kind: A.FLOAT, value: geometry.val.vertices, size: 3 },
-      a_normal: { kind: A.FLOAT, value: geometry.val.normals, size: 3 },
-      // a_texCoord: { type: A.FLOAT, value: [], size: 2 },
+      a_normal: { kind: A.FLOAT, value: geometry.val.normals, size: 3 }
     }
   })
   const entities = [{
