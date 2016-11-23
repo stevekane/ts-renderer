@@ -15,62 +15,25 @@ export enum UniformType { F, F2, F3, F4, I, I2, I3, I4, FV, FV2, FV3, FV4, IV, I
 export type Floats = number[] | Float32Array
 export type Ints = number[] | Int32Array
 
-type UT
-  = { kind: 'F', value?: number }
-  | { kind: 'F2', value?: Floats }
-  | { kind: 'F3', value?: Floats }
-  | { kind: 'F4', value?: Floats }
-  | { kind: 'I', value?: number }
-  | { kind: 'I2', value?: Ints }
-  | { kind: 'I3', value?: Ints }
-  | { kind: 'I4', value?: Ints }
-  | { kind: 'FV', value?: Floats }
-  | { kind: 'FV2', value?: Floats }
-  | { kind: 'FV3', value?: Floats }
-  | { kind: 'FV4', value?: Floats }
-  | { kind: 'IV', value?: Ints }
-  | { kind: 'IV2', value?: Ints }
-  | { kind: 'IV3', value?: Ints }
-  | { kind: 'IV4', value?: Ints }
-  | { kind: 'MAT2', value?: Floats }
-  | { kind: 'MAT3', value?: Floats }
-  | { kind: 'MAT4', value?: Floats }
+interface F { tag: 'F', value: number }
+interface F2 { tag: 'F2', value: number[] }
+type GLT = F | F2
 
-function forMatches
-<T,
- V extends Block<T>,
- U extends { [ K in keyof V ]: UT }>
-( u: U, v: V ) {
-  console.log(u)
-  console.log(v)
+function update ( u: F, v: F['value'] ): void
+function update ( u: F2, v: F2['value'] ): void
+function update ( u: GLT, v: any ) {
+  switch ( u.tag ) {
+    case 'F':  return console.log(u.value + v) //u.value + v)
+    case 'F2': return console.log(u.value.concat(v)) //.value.concat(v))
+    default:   const n: never = u
+               return n
+  }
 }
 
-type Item = { tag: 'F' }
-
-function single ( item: Item ) {
-  console.log(item)
-}
-
-function objOf <T extends { [ x: string ]: Item }> ( t: T ) {
-  console.log(t)
-}
-
-// const t = { tag: 'F' }
-const t2 = <Item>{ tag: 'F' }
-const o = { age: t2 }
-
-// single(t)
-single(t2)
-objOf(o)
-
-const uInitial = {
-  age: <UT>{ kind: 'F', value: 3 },
-}
-const uCurrent = {
-  age: 2,
-}
-
-forMatches(uInitial, uCurrent)
+update({ tag: 'F', value: 5 }, 3)
+update({ tag: 'F2', value: [ 5 ] }, [ 2 ])
+// update({ tag: 'F2', value: [ 5 ] }, 2)
+// matches({ tag: 'F2', value: [ 5 ] }, 2)
 
 export type UniformConfig
   = { kind: UniformType.F, value: number }

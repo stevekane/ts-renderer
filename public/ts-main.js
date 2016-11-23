@@ -31,29 +31,17 @@ var UniformType;
     UniformType[UniformType["MAT3"] = 17] = "MAT3";
     UniformType[UniformType["MAT4"] = 18] = "MAT4";
 })(UniformType = exports.UniformType || (exports.UniformType = {}));
-function forMatches(u, v) {
-    console.log(u);
-    console.log(v);
+function update(u, v) {
+    switch (u.tag) {
+        case 'F': return console.log(u.value + v); //u.value + v)
+        case 'F2': return console.log(u.value.concat(v)); //.value.concat(v))
+        default:
+            const n = u;
+            return n;
+    }
 }
-function single(item) {
-    console.log(item);
-}
-function objOf(t) {
-    console.log(t);
-}
-// const t = { tag: 'F' }
-const t2 = { tag: 'F' };
-const o = { age: t2 };
-// single(t)
-single(t2);
-objOf(o);
-const uInitial = {
-    age: { kind: 'F', value: 3 },
-};
-const uCurrent = {
-    age: 2,
-};
-forMatches(uInitial, uCurrent);
+update({ tag: 'F', value: 5 }, 3);
+update({ tag: 'F2', value: [5] }, [2]);
 function run(gl, c, cfg) {
     gl.useProgram(c.program);
     gl.enable(gl.DEPTH_TEST);
