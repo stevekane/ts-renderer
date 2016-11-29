@@ -15,25 +15,30 @@ export enum UniformType { F, F2, F3, F4, I, I2, I3, I4, FV, FV2, FV3, FV4, IV, I
 export type Floats = number[] | Float32Array
 export type Ints = number[] | Int32Array
 
-interface F { tag: 'F', value: number }
-interface F2 { tag: 'F2', value: number[] }
-type GLT = F | F2
+/*
+  This first time, I will implement the overloading via an interface 
+  which is similar to the way you would do such a thing in Rust or Haskell
+  or any language with a concept like typeclasses.  
 
-function update ( u: F, v: F['value'] ): void
-function update ( u: F2, v: F2['value'] ): void
-function update ( u: GLT, v: any ) {
-  switch ( u.tag ) {
-    case 'F':  return console.log(u.value + v) //u.value + v)
-    case 'F2': return console.log(u.value.concat(v)) //.value.concat(v))
-    default:   const n: never = u
-               return n
-  }
+  The downside of this approach from the POV of being idiomatically "Javascript-y"
+  is that you cannot use a raw literal to construct instances of these types.
+
+  This is because, you need to have the member method on the type in order
+  to do the dynamic dispatch of the appropriate setUniform function.
+
+  This could perhaps be overcome but doing structural dispatch via
+  function-overloading and that will be the second attempted API.
+*/
+
+interface SetUniform<T> {
+  setUniform: (u: Uniform<T>, t: T): void
 }
 
-update({ tag: 'F', value: 5 }, 3)
-update({ tag: 'F2', value: [ 5 ] }, [ 2 ])
-// update({ tag: 'F2', value: [ 5 ] }, 2)
-// matches({ tag: 'F2', value: [ 5 ] }, 2)
+interface UniformNumber<T> extends SetUniform<T> {
+  
+}
+
+interface Uniform
 
 export type UniformConfig
   = { kind: UniformType.F, value: number }
