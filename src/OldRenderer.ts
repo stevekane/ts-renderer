@@ -30,16 +30,6 @@ export type Ints = number[] | Int32Array
   function-overloading and that will be the second attempted API.
 */
 
-interface SetUniform<T> {
-  setUniform: (u: Uniform<T>, t: T): void
-}
-
-interface UniformNumber<T> extends SetUniform<T> {
-  
-}
-
-interface Uniform
-
 export type UniformConfig
   = { kind: UniformType.F, value: number }
   | { kind: UniformType.F2, value: number[] | Float32Array }

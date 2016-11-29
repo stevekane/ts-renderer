@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
     "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noFallThroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicityReturns": true,
