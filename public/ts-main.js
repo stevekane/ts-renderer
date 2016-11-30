@@ -1,16 +1,54 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
+function setupAttribute(gl, program, name, acfg) {
+    const { value, size, offset = 0, stride = 0 } = acfg;
+    const loc = gl.getAttribLocation(program, name);
+    const buffer = gl.createBuffer();
+    const glType = glTypeFor(gl, value);
+    if (loc == null)
+        return new Error(`Could not locate attr: ${name}`);
+    if (buffer == null)
+        return new Error(`Could not create buffer for attr: ${name}`);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    // TODO: Not sure if vertex attrib-related stuff needs to be here.  maybe only during render
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, glType, false, stride, offset);
+    gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW);
+    gl.disableVertexAttribArray(loc);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    return { value, size, offset, stride, loc, buffer };
+}
+exports.setupAttribute = setupAttribute;
+function glTypeFor(gl, v) {
+    if (v instanceof Float32Array)
+        return gl.FLOAT;
+    else if (v instanceof Int16Array)
+        return gl.SHORT;
+    else if (v instanceof Uint16Array)
+        return gl.UNSIGNED_SHORT;
+    else if (v instanceof Int8Array)
+        return gl.BYTE;
+    else
+        return gl.UNSIGNED_BYTE;
+}
+
+},{}],2:[function(require,module,exports){
+"use strict";
+const Attributes_1 = require("./Attributes");
 function createCommand(gl, cfg) {
     const program = fromSource(gl, cfg.vsrc, cfg.fsrc);
     if (program instanceof Error)
         return program;
-    const uniforms = locateUniforms(gl, program, cfg.uniforms);
+    const uniforms = setupUniforms(gl, program, cfg.uniforms);
     if (uniforms instanceof Error)
-        return new Error(uniforms.message);
-    return { gl, program, uniforms };
+        uniforms;
+    const attributes = setupAttributes(gl, program, cfg.attributes);
+    if (attributes instanceof Error)
+        return attributes;
+    return { gl, program, uniforms, attributes };
 }
 exports.createCommand = createCommand;
-function locateUniforms(gl, program, ucfgs) {
+function setupUniforms(gl, program, ucfgs) {
     const out = {};
     for (const key in ucfgs) {
         const { value, set } = ucfgs[key];
@@ -18,7 +56,18 @@ function locateUniforms(gl, program, ucfgs) {
         if (loc == null)
             return new Error(`Could not find uniform ${key}`);
         else
-            out[key] = { value, set, loc };
+            out[key] = { value, set, loc }; // TODO: could move to Uniforms as setupUniform for consistency
+    }
+    return out;
+}
+function setupAttributes(gl, program, uattrs) {
+    const out = {};
+    for (const key in uattrs) {
+        const attr = Attributes_1.setupAttribute(gl, program, key, uattrs[key]);
+        if (attr instanceof Error)
+            return attr;
+        else
+            out[key] = attr;
     }
     return out;
 }
@@ -48,10 +97,10 @@ function fromSource(gl, vsrc, fsrc) {
         : new Error(gl.getProgramInfoLog(program) || '');
 }
 
-},{}],2:[function(require,module,exports){
+},{"./Attributes":1}],3:[function(require,module,exports){
 "use strict";
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 const utils_1 = require("./utils");
 class UF {
@@ -188,7 +237,7 @@ class UMatrix4 {
 }
 exports.UMatrix4 = UMatrix4;
 
-},{"./utils":5}],4:[function(require,module,exports){
+},{"./utils":6}],5:[function(require,module,exports){
 "use strict";
 const Uniforms = require("./Uniforms");
 exports.Uniforms = Uniforms;
@@ -197,7 +246,7 @@ exports.Command = Command;
 const GLTypes = require("./GLTypes");
 exports.GLTypes = GLTypes;
 
-},{"./Command":1,"./GLTypes":2,"./Uniforms":3}],5:[function(require,module,exports){
+},{"./Command":2,"./GLTypes":3,"./Uniforms":4}],6:[function(require,module,exports){
 "use strict";
 function asF32(t) {
     return t instanceof Float32Array ? t : new Float32Array(t);
@@ -212,7 +261,7 @@ function toError(s, v) {
 }
 exports.toError = toError;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 const test_vsrc_1 = require("./shaders/test-vsrc");
 const test_fsrc_1 = require("./shaders/test-fsrc");
@@ -224,6 +273,17 @@ const command = Commando_1.Command.createCommand(gl, {
     fsrc: test_fsrc_1.default,
     uniforms: {
         u_color: new Commando_1.Uniforms.U4F([1, 0, 0, 1])
+    },
+    attributes: {
+        a_position: {
+            size: 3,
+            value: new Float32Array([
+                1.0, 1.0, 0.0,
+                -1.0, 1.0, 0.0,
+                1.0, -1.0, 0.0,
+                -1.0, -1.0, 0.0
+            ])
+        }
     }
 });
 console.log(command);
@@ -301,7 +361,7 @@ console.log(command);
 //   })
 // })
 
-},{"./Commando":4,"./shaders/test-fsrc":7,"./shaders/test-vsrc":8}],7:[function(require,module,exports){
+},{"./Commando":5,"./shaders/test-fsrc":8,"./shaders/test-vsrc":9}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
@@ -314,11 +374,13 @@ void main () {
 }
 `;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
 precision mediump float;
+
+attribute vec3 a_position;
 
 uniform vec4 u_color;
 
@@ -327,4 +389,4 @@ void main () {
 }
 `;
 
-},{}]},{},[6]);
+},{}]},{},[7]);

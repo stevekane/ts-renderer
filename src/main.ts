@@ -9,6 +9,17 @@ const command = Command.createCommand(gl, {
   fsrc, 
   uniforms: {
     u_color: new Uniforms.U4F([ 1, 0, 0, 1 ])
+  },
+  attributes: {
+    a_position: {
+      size: 3,
+      value: new Float32Array([
+        1.0,  1.0,  0.0,
+        -1.0,  1.0,  0.0,
+        1.0, -1.0,  0.0,
+        -1.0, -1.0,  0.0
+      ])
+    }
   }
 })
 

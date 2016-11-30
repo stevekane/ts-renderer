@@ -1,30 +1,37 @@
 import { GL, Program, Shader, ShaderSrc } from './GLTypes'
 import { UniformCfgs, Uniforms } from './Uniforms'
+import { AttributeCfgs, Attributes, setupAttribute } from './Attributes'
 import { toError } from './utils'
 
-export interface ICommandCfg<U> {
+export interface ICommandCfg<U, A> {
   vsrc: string
   fsrc: string
   uniforms: UniformCfgs<U>
+  attributes: AttributeCfgs<A>
 }
 
-export interface ICommand<U> {
+export interface ICommand<U, A> {
   uniforms: Uniforms<U>
+  attributes: Attributes<A>
 }
 
-export function createCommand<U> ( gl: GL, cfg: ICommandCfg<U> ): ICommand<U> | Error {
+export function createCommand<U, A> ( gl: GL, cfg: ICommandCfg<U, A> ): ICommand<U, A> | Error {
   const program = fromSource(gl, cfg.vsrc, cfg.fsrc)
 
   if ( program instanceof Error ) return program
 
-  const uniforms = locateUniforms(gl, program, cfg.uniforms)
+  const uniforms = setupUniforms(gl, program, cfg.uniforms)
 
-  if ( uniforms instanceof Error ) return new Error(uniforms.message)
+  if ( uniforms instanceof Error ) uniforms
 
-  return { gl, program, uniforms } as ICommand<U>
+  const attributes = setupAttributes(gl, program, cfg.attributes)
+
+  if ( attributes instanceof Error ) return attributes
+
+  return { gl, program, uniforms, attributes } as ICommand<U, A>
 }
 
-function locateUniforms<T> ( gl: GL, program: Program, ucfgs: UniformCfgs<T> ): Uniforms<T> | Error {
+function setupUniforms<T> ( gl: GL, program: Program, ucfgs: UniformCfgs<T> ): Uniforms<T> | Error {
   const out = {} as Uniforms<T>
 
   for ( const key in ucfgs ) {
@@ -32,9 +39,21 @@ function locateUniforms<T> ( gl: GL, program: Program, ucfgs: UniformCfgs<T> ): 
     const loc = gl.getUniformLocation(program, key)
 
     if ( loc == null ) return new Error(`Could not find uniform ${ key }`)
-    else               out[key] = { value, set, loc }
+    else               out[key] = { value, set, loc } // TODO: could move to Uniforms as setupUniform for consistency
   }
   return out
+}
+
+function setupAttributes<T> ( gl: GL, program: Program, uattrs: AttributeCfgs<T> ): Attributes<T> | Error {
+  const out = {} as Attributes<T>
+
+  for ( const key in uattrs ) {
+    const attr = setupAttribute(gl, program, key, uattrs[key])
+
+    if ( attr instanceof Error ) return attr
+    else                         out[key] = attr
+  }
+  return out 
 }
 
 function compileShader ( gl: GL, kind: number, src: ShaderSrc ): Shader | Error {
