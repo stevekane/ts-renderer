@@ -36,21 +36,39 @@ function glTypeFor(gl, v) {
 const Uniforms_1 = require("./Uniforms");
 const Attributes_1 = require("./Attributes");
 function run(cmd, p) {
-    const { gl, program, attributes, uniforms } = cmd;
-    console.log(p);
+    const { gl, program } = cmd;
+    const { attributes, uniforms, count } = p;
     gl.useProgram(program);
-    for (const key in uniforms) {
-        const { set, loc, value } = uniforms[key];
-        set(gl, loc, value);
+    for (const key in cmd.uniforms) {
+        const { loc, value } = cmd.uniforms[key];
+        const val = uniforms && uniforms[key] != null ? uniforms[key] : value;
+        // This is absolutely not type-safe.  I can pass literally anything I want to the function
+        // and it will fail at run-time.  Unsure why...
+        cmd.uniforms[key].set(gl, loc, val);
     }
-    for (const key in attributes) {
-        const { loc } = attributes[key];
-        gl.enableVertexAttribArray(loc);
+    for (const key in cmd.attributes) {
+        gl.enableVertexAttribArray(cmd.attributes[key].loc);
     }
-    gl.drawArrays(gl.TRIANGLES, 0, p.count);
-    for (const key in attributes) {
-        const { loc } = attributes[key];
-        gl.disableVertexAttribArray(loc);
+    /*
+      TODO: This doesn't work because the types don't flow through from CFG to Attribute in the
+      same that they do with the type parameter <T> in each instance of Uniforms.
+  
+      I probably need to make 5 classes implementing a generic interfaces for Attributes
+      similar to the classes and generic type in Uniforms.  This will allow the compiler to
+      understand that the type of data found in an AttrCfg<T> and shape-matching Attr<T> are
+      the same.
+    */
+    // if ( attributes != null ) {
+    //   for ( const key in attributes ) {
+    //     const val = attributes[key]
+    //     if ( val != null ) {
+    //       gl.bufferData(gl.ARRAY_BUFFER, val, gl.DYNAMIC_DRAW)
+    //     }
+    //   }
+    // }
+    gl.drawArrays(gl.TRIANGLES, 0, count);
+    for (const key in cmd.attributes) {
+        gl.disableVertexAttribArray(cmd.attributes[key].loc);
     }
     gl.useProgram(null);
 }
@@ -302,7 +320,7 @@ const command = Commando_1.Command.createCommand(gl, {
     vsrc: test_vsrc_1.default,
     fsrc: test_fsrc_1.default,
     uniforms: {
-        u_color: new Commando_1.Uniforms.U4F([1, 0, 0, 1]),
+        u_color: new Commando_1.Uniforms.U4F([0, 1, 0, 1]),
         u_time: new Commando_1.Uniforms.UF(performance.now())
     },
     attributes: {
@@ -319,10 +337,19 @@ const command = Commando_1.Command.createCommand(gl, {
         }
     }
 });
-if (command instanceof Error)
-    console.log(command.message);
-else
-    Commando_1.Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 });
+function render() {
+    gl.viewport(0, 0, c.width, c.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (command instanceof Error) {
+        console.log(command.message);
+    }
+    else {
+        Commando_1.Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 });
+        requestAnimationFrame(render);
+    }
+}
+render();
 // loadXHR('pyramid.obj')
 // .then(parseOBJ)
 // .then(geometry => {
@@ -407,7 +434,9 @@ uniform vec4 u_color;
 uniform float u_time;
 
 void main () {
-  gl_FragColor = vec4(u_color[0], u_color[1], u_color[2], sin(u_time));
+  float t = ( sin(u_time / 1000.0) + 1.0 ) * 0.5;
+
+  gl_FragColor = vec4(u_color[0], u_color[1], u_color[2], t);
 }
 `;
 

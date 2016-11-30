@@ -8,7 +8,7 @@ const command = Command.createCommand(gl, {
   vsrc, 
   fsrc, 
   uniforms: {
-    u_color: new Uniforms.U4F([ 1, 0, 0, 1 ]),
+    u_color: new Uniforms.U4F([ 0, 1, 0, 1 ]),
     u_time: new Uniforms.UF(performance.now())
   },
   attributes: {
@@ -26,8 +26,20 @@ const command = Command.createCommand(gl, {
   }
 })
 
-if ( command instanceof Error ) console.log(command.message)
-else Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 })
+function render () {
+  gl.viewport(0, 0, c.width, c.height)
+  gl.clearColor(0, 0, 0, 0)
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+  if ( command instanceof Error ) {
+    console.log(command.message)
+  }
+  else {
+    Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 })
+    requestAnimationFrame(render)
+  }
+}
+
+render()
 
 
 // loadXHR('pyramid.obj')
