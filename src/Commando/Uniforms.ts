@@ -1,4 +1,4 @@
-import { GL, Loc, Floats, Ints } from './GLTypes'
+import { GL, Program, Loc, Floats, Ints } from './GLTypes'
 import { asF32, asI32 } from './utils'
 
 export interface UniformCfg<T> { 
@@ -106,4 +106,12 @@ export class UMatrix3 implements UniformCfg<Floats> {
 export class UMatrix4 implements UniformCfg<Floats> {
   constructor( public value: Floats ) {}
   set( gl: GL, h: Loc, t: Floats ) { gl.uniformMatrix4fv(h, false, asF32(t)) }
+}
+
+export function setupUniform<T> ( gl: GL, program: Program, name: string, ucfg: UniformCfg<T> ): Uniform<T> | Error {
+  const { value, set } = ucfg
+  const loc = gl.getUniformLocation(program, name)
+
+  if ( loc == null ) return new Error(`Could not find uniform ${ name }`)
+  else               return { value, set, loc } as Uniform<T>
 }

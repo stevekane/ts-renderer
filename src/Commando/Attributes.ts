@@ -29,11 +29,10 @@ export function setupAttribute ( gl: GL, program: Program, name: string, acfg: A
   const buffer = gl.createBuffer()
   const glType = glTypeFor(gl, value)
 
-  if ( loc == null ) return new Error(`Could not locate attr: ${ name }`)
+  if ( loc == null )    return new Error(`Could not locate attr: ${ name }`)
   if ( buffer == null ) return new Error(`Could not create buffer for attr: ${ name }`)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-  // TODO: Not sure if vertex attrib-related stuff needs to be here.  maybe only during render
   gl.enableVertexAttribArray(loc)
   gl.vertexAttribPointer(loc, size, glType, false, stride, offset)
   gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW)

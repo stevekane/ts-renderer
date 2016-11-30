@@ -1,21 +1,59 @@
 import { GL, Program, Shader, ShaderSrc } from './GLTypes'
-import { UniformCfgs, Uniforms } from './Uniforms'
+import { UniformCfgs, Uniforms, setupUniform } from './Uniforms'
 import { AttributeCfgs, Attributes, setupAttribute } from './Attributes'
 import { toError } from './utils'
 
-export interface ICommandCfg<U, A> {
+export interface CommandCfg<U, A> {
   vsrc: string
   fsrc: string
   uniforms: UniformCfgs<U>
   attributes: AttributeCfgs<A>
 }
 
-export interface ICommand<U, A> {
+export interface Command<U, A> {
+  gl: GL
+  program: Program
   uniforms: Uniforms<U>
   attributes: Attributes<A>
 }
 
-export function createCommand<U, A> ( gl: GL, cfg: ICommandCfg<U, A> ): ICommand<U, A> | Error {
+export interface Params<U, A> {
+  uniforms?: { [ K in keyof U ]?: U[K] }
+  attributes?: { [ K in keyof A ]?: A[K] }
+  count: number
+}
+
+export function run<U, A> ( cmd: Command<U, A>, p: Params<U, A> ) {
+  const { gl, program, attributes, uniforms } = cmd
+
+  console.log(p)
+  gl.useProgram(program)
+
+  for ( const key in uniforms ) {
+    const { set, loc, value } = uniforms[key]
+
+    set(gl, loc, value)
+  }
+
+  for ( const key in attributes ) {
+    const { loc } = attributes[key]
+
+    gl.enableVertexAttribArray(loc)
+  }
+
+  gl.drawArrays(gl.TRIANGLES, 0, p.count)
+
+  for ( const key in attributes ) {
+    const { loc } = attributes[key]
+
+    gl.disableVertexAttribArray(loc)
+  }
+
+  gl.useProgram(null)
+}
+
+
+export function createCommand<U, A> ( gl: GL, cfg: CommandCfg<U, A> ): Command<U, A> | Error {
   const program = fromSource(gl, cfg.vsrc, cfg.fsrc)
 
   if ( program instanceof Error ) return program
@@ -28,18 +66,17 @@ export function createCommand<U, A> ( gl: GL, cfg: ICommandCfg<U, A> ): ICommand
 
   if ( attributes instanceof Error ) return attributes
 
-  return { gl, program, uniforms, attributes } as ICommand<U, A>
+  return { gl, program, uniforms, attributes } as Command<U, A>
 }
 
 function setupUniforms<T> ( gl: GL, program: Program, ucfgs: UniformCfgs<T> ): Uniforms<T> | Error {
   const out = {} as Uniforms<T>
 
   for ( const key in ucfgs ) {
-    const { value, set } = ucfgs[key]
-    const loc = gl.getUniformLocation(program, key)
+    const uniform = setupUniform(gl, program, key, ucfgs[key])
 
-    if ( loc == null ) return new Error(`Could not find uniform ${ key }`)
-    else               out[key] = { value, set, loc } // TODO: could move to Uniforms as setupUniform for consistency
+    if ( uniform instanceof Error ) return uniform
+    else                            out[key] = uniform
   }
   return out
 }

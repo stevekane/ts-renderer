@@ -10,7 +10,6 @@ function setupAttribute(gl, program, name, acfg) {
     if (buffer == null)
         return new Error(`Could not create buffer for attr: ${name}`);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    // TODO: Not sure if vertex attrib-related stuff needs to be here.  maybe only during render
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, size, glType, false, stride, offset);
     gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW);
@@ -34,7 +33,28 @@ function glTypeFor(gl, v) {
 
 },{}],2:[function(require,module,exports){
 "use strict";
+const Uniforms_1 = require("./Uniforms");
 const Attributes_1 = require("./Attributes");
+function run(cmd, p) {
+    const { gl, program, attributes, uniforms } = cmd;
+    console.log(p);
+    gl.useProgram(program);
+    for (const key in uniforms) {
+        const { set, loc, value } = uniforms[key];
+        set(gl, loc, value);
+    }
+    for (const key in attributes) {
+        const { loc } = attributes[key];
+        gl.enableVertexAttribArray(loc);
+    }
+    gl.drawArrays(gl.TRIANGLES, 0, p.count);
+    for (const key in attributes) {
+        const { loc } = attributes[key];
+        gl.disableVertexAttribArray(loc);
+    }
+    gl.useProgram(null);
+}
+exports.run = run;
 function createCommand(gl, cfg) {
     const program = fromSource(gl, cfg.vsrc, cfg.fsrc);
     if (program instanceof Error)
@@ -51,12 +71,11 @@ exports.createCommand = createCommand;
 function setupUniforms(gl, program, ucfgs) {
     const out = {};
     for (const key in ucfgs) {
-        const { value, set } = ucfgs[key];
-        const loc = gl.getUniformLocation(program, key);
-        if (loc == null)
-            return new Error(`Could not find uniform ${key}`);
+        const uniform = Uniforms_1.setupUniform(gl, program, key, ucfgs[key]);
+        if (uniform instanceof Error)
+            return uniform;
         else
-            out[key] = { value, set, loc }; // TODO: could move to Uniforms as setupUniform for consistency
+            out[key] = uniform;
     }
     return out;
 }
@@ -97,7 +116,7 @@ function fromSource(gl, vsrc, fsrc) {
         : new Error(gl.getProgramInfoLog(program) || '');
 }
 
-},{"./Attributes":1}],3:[function(require,module,exports){
+},{"./Attributes":1,"./Uniforms":4}],3:[function(require,module,exports){
 "use strict";
 
 },{}],4:[function(require,module,exports){
@@ -236,9 +255,20 @@ class UMatrix4 {
     set(gl, h, t) { gl.uniformMatrix4fv(h, false, utils_1.asF32(t)); }
 }
 exports.UMatrix4 = UMatrix4;
+function setupUniform(gl, program, name, ucfg) {
+    const { value, set } = ucfg;
+    const loc = gl.getUniformLocation(program, name);
+    if (loc == null)
+        return new Error(`Could not find uniform ${name}`);
+    else
+        return { value, set, loc };
+}
+exports.setupUniform = setupUniform;
 
 },{"./utils":6}],5:[function(require,module,exports){
 "use strict";
+const Attributes = require("./Attributes");
+exports.Attributes = Attributes;
 const Uniforms = require("./Uniforms");
 exports.Uniforms = Uniforms;
 const Command = require("./Command");
@@ -246,7 +276,7 @@ exports.Command = Command;
 const GLTypes = require("./GLTypes");
 exports.GLTypes = GLTypes;
 
-},{"./Command":2,"./GLTypes":3,"./Uniforms":4}],6:[function(require,module,exports){
+},{"./Attributes":1,"./Command":2,"./GLTypes":3,"./Uniforms":4}],6:[function(require,module,exports){
 "use strict";
 function asF32(t) {
     return t instanceof Float32Array ? t : new Float32Array(t);
@@ -272,21 +302,27 @@ const command = Commando_1.Command.createCommand(gl, {
     vsrc: test_vsrc_1.default,
     fsrc: test_fsrc_1.default,
     uniforms: {
-        u_color: new Commando_1.Uniforms.U4F([1, 0, 0, 1])
+        u_color: new Commando_1.Uniforms.U4F([1, 0, 0, 1]),
+        u_time: new Commando_1.Uniforms.UF(performance.now())
     },
     attributes: {
         a_position: {
             size: 3,
             value: new Float32Array([
-                1.0, 1.0, 0.0,
-                -1.0, 1.0, 0.0,
+                -1.0, -1.0, 0.0,
                 1.0, -1.0, 0.0,
-                -1.0, -1.0, 0.0
+                1.0, 1.0, 0.0,
+                -1.0, -1.0, 0.0,
+                1.0, 1.0, 0.0,
+                -1.0, 1.0, 0.0
             ])
         }
     }
 });
-console.log(command);
+if (command instanceof Error)
+    console.log(command.message);
+else
+    Commando_1.Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 });
 // loadXHR('pyramid.obj')
 // .then(parseOBJ)
 // .then(geometry => {
@@ -368,9 +404,10 @@ exports.default = `
 precision mediump float;
 
 uniform vec4 u_color;
+uniform float u_time;
 
 void main () {
-  gl_FragColor = u_color;
+  gl_FragColor = vec4(u_color[0], u_color[1], u_color[2], sin(u_time));
 }
 `;
 
@@ -383,9 +420,10 @@ precision mediump float;
 attribute vec3 a_position;
 
 uniform vec4 u_color;
+uniform float u_time;
 
 void main () {
-  gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+  gl_Position = vec4(a_position, 1.0);
 }
 `;
 

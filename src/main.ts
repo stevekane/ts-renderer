@@ -1,6 +1,6 @@
 import vsrc from './shaders/test-vsrc'
 import fsrc from './shaders/test-fsrc'
-import { Uniforms, Command } from './Commando'
+import { Attributes, Uniforms, Command } from './Commando'
 
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
@@ -8,22 +8,26 @@ const command = Command.createCommand(gl, {
   vsrc, 
   fsrc, 
   uniforms: {
-    u_color: new Uniforms.U4F([ 1, 0, 0, 1 ])
+    u_color: new Uniforms.U4F([ 1, 0, 0, 1 ]),
+    u_time: new Uniforms.UF(performance.now())
   },
   attributes: {
     a_position: {
       size: 3,
       value: new Float32Array([
-        1.0,  1.0,  0.0,
-        -1.0,  1.0,  0.0,
+        -1.0, -1.0,  0.0,
         1.0, -1.0,  0.0,
-        -1.0, -1.0,  0.0
+        1.0,  1.0,  0.0,
+        -1.0, -1.0,  0.0,
+        1.0,  1.0,  0.0,
+        -1.0,  1.0,  0.0
       ])
     }
   }
 })
 
-console.log(command)
+if ( command instanceof Error ) console.log(command.message)
+else Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 })
 
 
 // loadXHR('pyramid.obj')
