@@ -18,8 +18,8 @@ export interface Command<U, A> {
 }
 
 export interface Params<U, A> {
-  uniforms?: { [ K in keyof U ]?: U[K] }
-  attributes?: { [ K in keyof A ]?: A[K] }
+  uniforms?: Partial<U>
+  attributes?: Partial<A> 
   count: number
 }
 
@@ -30,36 +30,19 @@ export function run<U, A> ( cmd: Command<U, A>, p: Params<U, A> ) {
   gl.useProgram(program)
 
   for ( const key in cmd.uniforms ) {
-    const { loc, value } = cmd.uniforms[key]
-    const val = uniforms && uniforms[key] != null ? uniforms[key] : value
+    const { loc, value, set } = cmd.uniforms[key]
+    const val = uniforms && uniforms[key]
 
-    // This is absolutely not type-safe.  I can pass literally anything I want to the function
-    // and it will fail at run-time.  Unsure why...
-    cmd.uniforms[key].set(gl, loc, val)
+    if ( val != null ) set(gl, loc, val)
   }
 
   for ( const key in cmd.attributes ) {
+    const { loc, value, set } = cmd.attributes[key]
+    const val = attributes && attributes[key]
+
     gl.enableVertexAttribArray(cmd.attributes[key].loc)
+    if ( val != null ) set(gl, cmd.attributes[key], val)
   }
-
-  /*
-    TODO: This doesn't work because the types don't flow through from CFG to Attribute in the
-    same that they do with the type parameter <T> in each instance of Uniforms.  
-
-    I probably need to make 5 classes implementing a generic interfaces for Attributes
-    similar to the classes and generic type in Uniforms.  This will allow the compiler to
-    understand that the type of data found in an AttrCfg<T> and shape-matching Attr<T> are 
-    the same.
-  */
-  // if ( attributes != null ) {
-  //   for ( const key in attributes ) {
-  //     const val = attributes[key]
-
-  //     if ( val != null ) {
-  //       gl.bufferData(gl.ARRAY_BUFFER, val, gl.DYNAMIC_DRAW)
-  //     }
-  //   }
-  // }
 
   gl.drawArrays(gl.TRIANGLES, 0, count)
 

@@ -3,7 +3,7 @@ import { asF32, asI32 } from './utils'
 
 export interface UniformCfg<T> { 
   value: T
-  set<T>( gl: GL, h: WebGLUniformLocation, t: T): void
+  set( gl: GL, h: WebGLUniformLocation, t: T): void
 }
 
 export interface Uniform<T> extends UniformCfg<T> { 
@@ -113,5 +113,5 @@ export function setupUniform<T> ( gl: GL, program: Program, name: string, ucfg: 
   const loc = gl.getUniformLocation(program, name)
 
   if ( loc == null ) return new Error(`Could not find uniform ${ name }`)
-  else               return { value, set, loc } as Uniform<T>
+  else               return (set(gl, loc, value), { value, set, loc })
 }

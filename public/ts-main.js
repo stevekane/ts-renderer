@@ -1,34 +1,55 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
+var BufferType;
+(function (BufferType) {
+    BufferType[BufferType["BYTE"] = 0] = "BYTE";
+    BufferType[BufferType["UNSIGNED_BYTE"] = 1] = "UNSIGNED_BYTE";
+    BufferType[BufferType["SHORT"] = 2] = "SHORT";
+    BufferType[BufferType["UNSIGNED_SHORT"] = 3] = "UNSIGNED_SHORT";
+    BufferType[BufferType["FLOAT"] = 4] = "FLOAT";
+})(BufferType = exports.BufferType || (exports.BufferType = {}));
+class Floats {
+    constructor(size, value) {
+        this.size = size;
+        this.value = value;
+        this.offset = 0;
+        this.stride = 0;
+        this.bufferType = BufferType.FLOAT;
+    }
+    set(gl, a, value) {
+        const { loc, size, stride, offset, buffer } = a;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+}
+exports.Floats = Floats;
 function setupAttribute(gl, program, name, acfg) {
-    const { value, size, offset = 0, stride = 0 } = acfg;
+    const { value, bufferType, size, set, offset = 0, stride = 0 } = acfg;
     const loc = gl.getAttribLocation(program, name);
     const buffer = gl.createBuffer();
-    const glType = glTypeFor(gl, value);
     if (loc == null)
         return new Error(`Could not locate attr: ${name}`);
     if (buffer == null)
         return new Error(`Could not create buffer for attr: ${name}`);
+    const a = { value, bufferType, size, offset, stride, loc, buffer, set };
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, size, glType, false, stride, offset);
-    gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW);
-    gl.disableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, toGLType(gl, bufferType), false, stride, offset);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    return { value, size, offset, stride, loc, buffer };
+    return (set(gl, a, value), { value, bufferType, size, offset, stride, loc, buffer, set });
 }
 exports.setupAttribute = setupAttribute;
-function glTypeFor(gl, v) {
-    if (v instanceof Float32Array)
-        return gl.FLOAT;
-    else if (v instanceof Int16Array)
-        return gl.SHORT;
-    else if (v instanceof Uint16Array)
-        return gl.UNSIGNED_SHORT;
-    else if (v instanceof Int8Array)
-        return gl.BYTE;
-    else
-        return gl.UNSIGNED_BYTE;
+function toGLType(gl, bufferType) {
+    switch (bufferType) {
+        case BufferType.FLOAT: return gl.FLOAT;
+        case BufferType.SHORT: return gl.SHORT;
+        case BufferType.BYTE: return gl.BYTE;
+        case BufferType.UNSIGNED_SHORT: return gl.UNSIGNED_SHORT;
+        case BufferType.UNSIGNED_BYTE: return gl.UNSIGNED_BYTE;
+        default:
+            const n = bufferType;
+            return n;
+    }
 }
 
 },{}],2:[function(require,module,exports){
@@ -40,32 +61,18 @@ function run(cmd, p) {
     const { attributes, uniforms, count } = p;
     gl.useProgram(program);
     for (const key in cmd.uniforms) {
-        const { loc, value } = cmd.uniforms[key];
-        const val = uniforms && uniforms[key] != null ? uniforms[key] : value;
-        // This is absolutely not type-safe.  I can pass literally anything I want to the function
-        // and it will fail at run-time.  Unsure why...
-        cmd.uniforms[key].set(gl, loc, val);
+        const { loc, value, set } = cmd.uniforms[key];
+        const val = uniforms && uniforms[key];
+        if (val != null)
+            set(gl, loc, val);
     }
     for (const key in cmd.attributes) {
+        const { loc, value, set } = cmd.attributes[key];
+        const val = attributes && attributes[key];
         gl.enableVertexAttribArray(cmd.attributes[key].loc);
+        if (val != null)
+            set(gl, cmd.attributes[key], val);
     }
-    /*
-      TODO: This doesn't work because the types don't flow through from CFG to Attribute in the
-      same that they do with the type parameter <T> in each instance of Uniforms.
-  
-      I probably need to make 5 classes implementing a generic interfaces for Attributes
-      similar to the classes and generic type in Uniforms.  This will allow the compiler to
-      understand that the type of data found in an AttrCfg<T> and shape-matching Attr<T> are
-      the same.
-    */
-    // if ( attributes != null ) {
-    //   for ( const key in attributes ) {
-    //     const val = attributes[key]
-    //     if ( val != null ) {
-    //       gl.bufferData(gl.ARRAY_BUFFER, val, gl.DYNAMIC_DRAW)
-    //     }
-    //   }
-    // }
     gl.drawArrays(gl.TRIANGLES, 0, count);
     for (const key in cmd.attributes) {
         gl.disableVertexAttribArray(cmd.attributes[key].loc);
@@ -279,7 +286,7 @@ function setupUniform(gl, program, name, ucfg) {
     if (loc == null)
         return new Error(`Could not find uniform ${name}`);
     else
-        return { value, set, loc };
+        return (set(gl, loc, value), { value, set, loc });
 }
 exports.setupUniform = setupUniform;
 
@@ -324,17 +331,14 @@ const command = Commando_1.Command.createCommand(gl, {
         u_time: new Commando_1.Uniforms.UF(performance.now())
     },
     attributes: {
-        a_position: {
-            size: 3,
-            value: new Float32Array([
-                -1.0, -1.0, 0.0,
-                1.0, -1.0, 0.0,
-                1.0, 1.0, 0.0,
-                -1.0, -1.0, 0.0,
-                1.0, 1.0, 0.0,
-                -1.0, 1.0, 0.0
-            ])
-        }
+        a_position: new Commando_1.Attributes.Floats(3, new Float32Array([
+            -1.0, -1.0, 0.0,
+            1.0, -1.0, 0.0,
+            1.0, 1.0, 0.0,
+            -1.0, -1.0, 0.0,
+            1.0, 1.0, 0.0,
+            -1.0, 1.0, 0.0
+        ]))
     }
 });
 function render() {
@@ -345,7 +349,12 @@ function render() {
         console.log(command.message);
     }
     else {
-        Commando_1.Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 });
+        Commando_1.Command.run(command, {
+            uniforms: {
+                u_time: performance.now()
+            },
+            count: 6
+        });
         requestAnimationFrame(render);
     }
 }

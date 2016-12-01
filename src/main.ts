@@ -12,17 +12,14 @@ const command = Command.createCommand(gl, {
     u_time: new Uniforms.UF(performance.now())
   },
   attributes: {
-    a_position: {
-      size: 3,
-      value: new Float32Array([
-        -1.0, -1.0,  0.0,
-        1.0, -1.0,  0.0,
-        1.0,  1.0,  0.0,
-        -1.0, -1.0,  0.0,
-        1.0,  1.0,  0.0,
-        -1.0,  1.0,  0.0
-      ])
-    }
+    a_position: new Attributes.Floats(3, new Float32Array([ 
+      -1.0, -1.0,  0.0,
+      1.0, -1.0,  0.0,
+      1.0,  1.0,  0.0,
+      -1.0, -1.0,  0.0,
+      1.0,  1.0,  0.0,
+      -1.0,  1.0,  0.0
+    ]))
   }
 })
 
@@ -34,7 +31,12 @@ function render () {
     console.log(command.message)
   }
   else {
-    Command.run(command, { uniforms: { u_time: performance.now() }, count: 6 })
+    Command.run(command, { 
+      uniforms: { 
+        u_time: performance.now()
+      },
+      count: 6 
+    })
     requestAnimationFrame(render)
   }
 }
