@@ -1,9 +1,22 @@
 import vsrc from './shaders/test-vsrc'
 import fsrc from './shaders/test-fsrc'
+import pvvsrc from './shaders/per-vertex-vsrc'
+import pvfsrc from './shaders/per-vertex-fsrc'
+import { M4, translate, rotateY, lookAt, perspective } from './Matrix'
 import { Attributes, Uniforms, Command } from './Commando'
+
+// TODO: probably should make uniforms/attributes optional on the cfg as well...
 
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
+const screenQuad = new Float32Array([
+  -1.0, -1.0, 0.0,
+  1.0, -1.0, 0.0,
+  1.0, 1.0, 0.0,
+  -1.0, -1.0, 0.0,
+  1.0, 1.0, 0.0,
+  -1.0, 1.0, 0.0
+])
 const command = Command.createCommand(gl, {
   vsrc, 
   fsrc, 
@@ -12,25 +25,44 @@ const command = Command.createCommand(gl, {
     u_time: new Uniforms.UF(performance.now())
   },
   attributes: {
-    a_position: new Attributes.Floats(3, new Float32Array([ 
-      -1.0, -1.0,  0.0,
-      1.0, -1.0,  0.0,
-      1.0,  1.0,  0.0,
-      -1.0, -1.0,  0.0,
-      1.0,  1.0,  0.0,
-      -1.0,  1.0,  0.0
-    ]))
+    a_position: new Attributes.Floats(3, screenQuad)
   }
 })
 
-function render () {
-  gl.viewport(0, 0, c.width, c.height)
-  gl.clearColor(0, 0, 0, 0)
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-  if ( command instanceof Error ) {
-    console.log(command.message)
+const drawPyramid = Command.createCommand(gl, {
+  vsrc: pvvsrc,
+  fsrc: pvfsrc,
+  uniforms: {
+    u_light: new Uniforms.U3F([ 0, 0, 0 ]),
+    u_model: new Uniforms.UMatrix4(M4()),
+    u_view: new Uniforms.UMatrix4(M4()),
+    u_projection: new Uniforms.UMatrix4(M4())
+  },
+  attributes: {
+    a_coord: new Attributes.Floats(3, new Float32Array(200)), // TODO: tmp value here for now
+    a_normal: new Attributes.Floats(3, new Float32Array(200)), // TODO: tmp value here for now
   }
-  else {
+})
+
+console.log(command)
+console.log(drawPyramid)
+
+// loadXHR('pyramid.obj')
+// .then(parseOBJ)
+// .then(geometry => {
+//   if ( !geometry.success ) return
+// 
+//   
+// })
+
+if ( command instanceof Error ) {
+  console.log(command.message) 
+}
+else {
+  const render = function render () {
+    gl.viewport(0, 0, c.width, c.height)
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     Command.run(command, { 
       uniforms: { 
         u_time: performance.now()
@@ -39,10 +71,8 @@ function render () {
     })
     requestAnimationFrame(render)
   }
+  requestAnimationFrame(render)
 }
-
-render()
-
 
 // loadXHR('pyramid.obj')
 // .then(parseOBJ)

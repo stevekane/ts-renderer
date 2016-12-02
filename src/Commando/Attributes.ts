@@ -22,7 +22,9 @@ export interface AttributeCfg<T> {
   size: AttributeSize
   offset?: number
   stride?: number
+  setup( gl: GL, a: Attribute<T> ): void
   set( gl: GL, a: Attribute<T>, t: T ): void
+  teardown( gl: GL, a: Attribute<T> ): void
 }
 
 export interface Attribute<T> extends AttributeCfg<T> {
@@ -38,29 +40,36 @@ export class Floats implements AttributeCfg<Float32Array> {
   stride = 0
   readonly bufferType = BufferType.FLOAT
   constructor( public size: AttributeSize, public value: Float32Array ) {}
-  set( gl: GL, a: Attribute<Float32Array>, value: Float32Array ) {
-    const { loc, size, stride, offset, buffer } = a
+  setup(gl: GL, a: Attribute<Float32Array> ) {
+    const { loc, size, bufferType, buffer, stride = 0, offset = 0 } = a
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.enableVertexAttribArray(a.loc)
+    gl.vertexAttribPointer(loc, size, toGLType(gl, bufferType), false, stride, offset)
+  }
+  set( gl: GL, a: Attribute<Float32Array>, value: Float32Array ) {
     gl.bufferData(gl.ARRAY_BUFFER, value, gl.DYNAMIC_DRAW)
+  }
+  teardown(gl: GL, a: Attribute<Float32Array> ) {
+    gl.disableVertexAttribArray(a.loc) 
     gl.bindBuffer(gl.ARRAY_BUFFER, null)
   }
 }
 
 export function setupAttribute<T> ( gl: GL, program: Program, name: string, acfg: AttributeCfg<T> ): Attribute<T> | Error {
-  const { value, bufferType, size, set, offset = 0, stride = 0 } = acfg
+  const { value, bufferType, size, set, setup, teardown, offset = 0, stride = 0 } = acfg
   const loc = gl.getAttribLocation(program, name)
   const buffer = gl.createBuffer()
 
   if ( loc == null )    return new Error(`Could not locate attr: ${ name }`)
   if ( buffer == null ) return new Error(`Could not create buffer for attr: ${ name }`)
 
-  const a = { value, bufferType, size, offset, stride, loc, buffer, set }
+  const a = { value, bufferType, size, offset, stride, loc, buffer, set, setup, teardown }
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
-  gl.vertexAttribPointer(loc, size, toGLType(gl, bufferType), false, stride, offset)
-  gl.bindBuffer(gl.ARRAY_BUFFER, null)
-  return (set(gl, a, value), { value, bufferType, size, offset, stride, loc, buffer, set })
+  setup(gl, a)
+  set(gl, a, value)
+  teardown(gl, a)
+  return a
 }
 
 function toGLType ( gl: GL, bufferType: BufferType ): number {

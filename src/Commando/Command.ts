@@ -31,23 +31,25 @@ export function run<U, A> ( cmd: Command<U, A>, p: Params<U, A> ) {
 
   for ( const key in cmd.uniforms ) {
     const { loc, value, set } = cmd.uniforms[key]
-    const val = uniforms && uniforms[key]
+    const val = uniforms && uniforms[key] || value
 
-    if ( val != null ) set(gl, loc, val)
+    set(gl, loc, val)
   }
 
   for ( const key in cmd.attributes ) {
-    const { loc, value, set } = cmd.attributes[key]
+    const a = cmd.attributes[key]
     const val = attributes && attributes[key]
 
-    gl.enableVertexAttribArray(cmd.attributes[key].loc)
-    if ( val != null ) set(gl, cmd.attributes[key], val)
+    a.setup(gl, a)
+    if ( val != null ) a.set(gl, a, val)
   }
 
   gl.drawArrays(gl.TRIANGLES, 0, count)
 
   for ( const key in cmd.attributes ) {
-    gl.disableVertexAttribArray(cmd.attributes[key].loc)
+    const a = cmd.attributes[key]
+
+    a.teardown(gl, a)
   }
 
   gl.useProgram(null)
@@ -73,24 +75,28 @@ export function createCommand<U, A> ( gl: GL, cfg: CommandCfg<U, A> ): Command<U
 function setupUniforms<T> ( gl: GL, program: Program, ucfgs: UniformCfgs<T> ): Uniforms<T> | Error {
   const out = {} as Uniforms<T>
 
+  gl.useProgram(program)
   for ( const key in ucfgs ) {
     const uniform = setupUniform(gl, program, key, ucfgs[key])
 
     if ( uniform instanceof Error ) return uniform
     else                            out[key] = uniform
   }
+  gl.useProgram(null)
   return out
 }
 
 function setupAttributes<T> ( gl: GL, program: Program, uattrs: AttributeCfgs<T> ): Attributes<T> | Error {
   const out = {} as Attributes<T>
 
+  gl.useProgram(program)
   for ( const key in uattrs ) {
     const attr = setupAttribute(gl, program, key, uattrs[key])
 
     if ( attr instanceof Error ) return attr
     else                         out[key] = attr
   }
+  gl.useProgram(null)
   return out 
 }
 
@@ -116,7 +122,6 @@ function fromSource ( gl: GL, vsrc: ShaderSrc, fsrc: ShaderSrc ): Program | Erro
   gl.attachShader(program, vertex)
   gl.attachShader(program, fragment)
   gl.linkProgram(program)
-  gl.useProgram(program)
 
   return program && gl.getProgramParameter(program, gl.LINK_STATUS) 
     ? program 

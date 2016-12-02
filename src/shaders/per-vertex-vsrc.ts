@@ -5,7 +5,6 @@ precision mediump float;
 attribute vec3 a_coord; 
 attribute vec3 a_normal;
 
-uniform float u_time;
 uniform vec3 u_light;
 uniform mat4 u_model;
 uniform mat4 u_view;

@@ -2,7 +2,6 @@ export default
 `
 precision mediump float; 
 
-uniform float u_time;
 uniform vec3 u_position;
 uniform vec3 u_scale;
 uniform vec3 u_rotation;
