@@ -999,11 +999,15 @@ Load_1.loadXHR('pyramid.obj')
         console.log(drawPyramid);
     }
     else {
+        var t = 0;
         const render = function render() {
+            t++;
             if (keys[37])
                 transform.rotation[1] -= 0.05;
             if (keys[39])
                 transform.rotation[1] += 0.05;
+            light[0] = Math.cos(t / 10) * 2;
+            light[2] = Math.sin(t / 10) * 2;
             Matrix_1.identity(transform.model);
             Matrix_1.translate(transform.model, transform.position);
             Matrix_1.scale(transform.model, transform.scale);
