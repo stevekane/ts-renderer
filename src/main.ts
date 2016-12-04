@@ -23,6 +23,7 @@ loadXHR('pyramid.obj')
     1.0, 1.0, 0.0,
     -1.0, 1.0, 0.0
   ])
+  const keys = new Array(256)
   const light = V3(0, 2, 0)
   const vertices = new Float32Array(geometry.val.vertices)
   const normals = new Float32Array(geometry.val.normals)
@@ -74,6 +75,9 @@ loadXHR('pyramid.obj')
   }
   else {
     const render = function render () {
+      if ( keys[37] ) transform.rotation[1] -= 0.05
+      if ( keys[39] ) transform.rotation[1] += 0.05
+
       identity(transform.model)
       translate(transform.model, transform.position)
       scale(transform.model, transform.scale)
@@ -109,12 +113,7 @@ loadXHR('pyramid.obj')
     }
     requestAnimationFrame(render)
 
-    document.body.addEventListener('keydown', ({ keyCode }) => {
-      switch( keyCode ) {
-        case 37: return transform.rotation[1] -= 0.1
-        case 39: return transform.rotation[1] += 0.1
-        default: return
-      } 
-    })
+    document.body.addEventListener('keydown', ({ keyCode }) => keys[keyCode] = 1)
+    document.body.addEventListener('keyup', ({ keyCode }) => keys[keyCode] = 0)
   }
 })
