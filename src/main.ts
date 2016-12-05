@@ -1,5 +1,3 @@
-import vsrc from './shaders/test-vsrc'
-import fsrc from './shaders/test-fsrc'
 import pvvsrc from './shaders/per-vertex-vsrc'
 import pvfsrc from './shaders/per-vertex-fsrc'
 import { loadXHR } from './Load'
@@ -10,11 +8,24 @@ import { Attributes, Uniforms, Command } from './Commando'
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
 
+/*
+  At-a-glance understanding of GLTF
+
+  binary data is stored in <Buffer>
+  1-N <BufferView> refer to slices of a <Buffer> by bytelength ( no type/stride info )
+  1-N <Accessor> adds information to <BufferView> like stride, type, offset, count
+  
+  create single buffer, get bufferViews like Float32Array as slices into this buffer
+      
+*/
+
 loadXHR('pyramid.obj')
 .then(parseOBJ)
 .then(geometry => {
   if ( !geometry.success ) return
 
+
+  console.log(geometry.val)
   const keys = new Array(256)
   const light = V3(0, 2, 0)
   const vertices = new Float32Array(geometry.val.vertices)

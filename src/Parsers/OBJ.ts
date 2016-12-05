@@ -104,9 +104,9 @@ function linesToGeometry (lines: Line[]): IGeometry {
     else if ( l.kind === 'Face' )     pFaces.push(...l.value)
     else {}
   }
-  const vertices = new Float32Array(pFaces.length * 3)
-  const normals = new Float32Array(pFaces.length * 3)
-  const texCoords = new Float32Array(pFaces.length * 2)
+  const vertices = new Array(pFaces.length * 3)
+  const normals = new Array(pFaces.length * 3)
+  const texCoords = new Array(pFaces.length * 2)
   const defaultNormal = [ 0, 0, 1 ]
   const defaultTexCoord = [ 0, 0 ]
 
