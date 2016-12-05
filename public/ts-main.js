@@ -925,8 +925,6 @@ exports.is = is;
 
 },{}],13:[function(require,module,exports){
 "use strict";
-const test_vsrc_1 = require("./shaders/test-vsrc");
-const test_fsrc_1 = require("./shaders/test-fsrc");
 const per_vertex_vsrc_1 = require("./shaders/per-vertex-vsrc");
 const per_vertex_fsrc_1 = require("./shaders/per-vertex-fsrc");
 const Load_1 = require("./Load");
@@ -940,14 +938,6 @@ Load_1.loadXHR('pyramid.obj')
     .then(geometry => {
     if (!geometry.success)
         return;
-    const screenQuad = new Float32Array([
-        -1.0, -1.0, 0.0,
-        1.0, -1.0, 0.0,
-        1.0, 1.0, 0.0,
-        -1.0, -1.0, 0.0,
-        1.0, 1.0, 0.0,
-        -1.0, 1.0, 0.0
-    ]);
     const keys = new Array(256);
     const light = Matrix_1.V3(0, 2, 0);
     const vertices = new Float32Array(geometry.val.vertices);
@@ -969,17 +959,6 @@ Load_1.loadXHR('pyramid.obj')
         rotation: Matrix_1.V3(0, 0, 0),
         model: Matrix_1.M4()
     };
-    const command = Commando_1.Command.createCommand(gl, {
-        vsrc: test_vsrc_1.default,
-        fsrc: test_fsrc_1.default,
-        uniforms: {
-            u_color: new Commando_1.Uniforms.U4F([0, 1, 0, 1]),
-            u_time: new Commando_1.Uniforms.UF(performance.now())
-        },
-        attributes: {
-            a_position: new Commando_1.Attributes.Floats(3, screenQuad)
-        }
-    });
     const drawPyramid = Commando_1.Command.createCommand(gl, {
         vsrc: per_vertex_vsrc_1.default,
         fsrc: per_vertex_fsrc_1.default,
@@ -994,8 +973,7 @@ Load_1.loadXHR('pyramid.obj')
             a_normal: new Commando_1.Attributes.Floats(3, normals)
         }
     });
-    if (command instanceof Error || drawPyramid instanceof Error) {
-        console.log(command);
+    if (drawPyramid instanceof Error) {
         console.log(drawPyramid);
     }
     else {
@@ -1022,12 +1000,6 @@ Load_1.loadXHR('pyramid.obj')
             gl.viewport(0, 0, c.width, c.height);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            Commando_1.Command.run(command, {
-                uniforms: {
-                    u_time: performance.now()
-                },
-                count: 6
-            });
             Commando_1.Command.run(drawPyramid, {
                 uniforms: {
                     u_light: light,
@@ -1045,7 +1017,7 @@ Load_1.loadXHR('pyramid.obj')
     }
 });
 
-},{"./Commando":5,"./Load":7,"./Matrix":8,"./Parsers/OBJ":9,"./shaders/per-vertex-fsrc":14,"./shaders/per-vertex-vsrc":15,"./shaders/test-fsrc":16,"./shaders/test-vsrc":17}],14:[function(require,module,exports){
+},{"./Commando":5,"./Load":7,"./Matrix":8,"./Parsers/OBJ":9,"./shaders/per-vertex-fsrc":14,"./shaders/per-vertex-vsrc":15}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
@@ -1095,38 +1067,6 @@ void main () {
 
   v_color = vec4(color[0] * diffuse, color[1] * diffuse, color[2] * diffuse, color[3]);
   gl_Position = MVP * vec4(a_coord, 1.0);
-}
-`;
-
-},{}],16:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = `
-precision mediump float;
-
-uniform vec4 u_color;
-uniform float u_time;
-
-void main () {
-  float t = ( sin(u_time / 1000.0) + 1.0 ) * 0.5;
-
-  gl_FragColor = vec4(u_color[0], u_color[1], u_color[2], t);
-}
-`;
-
-},{}],17:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = `
-precision mediump float;
-
-attribute vec3 a_position;
-
-uniform vec4 u_color;
-uniform float u_time;
-
-void main () {
-  gl_Position = vec4(a_position, 1.0);
 }
 `;
 

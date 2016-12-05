@@ -15,14 +15,6 @@ loadXHR('pyramid.obj')
 .then(geometry => {
   if ( !geometry.success ) return
 
-  const screenQuad = new Float32Array([
-    -1.0, -1.0, 0.0,
-    1.0, -1.0, 0.0,
-    1.0, 1.0, 0.0,
-    -1.0, -1.0, 0.0,
-    1.0, 1.0, 0.0,
-    -1.0, 1.0, 0.0
-  ])
   const keys = new Array(256)
   const light = V3(0, 2, 0)
   const vertices = new Float32Array(geometry.val.vertices)
@@ -44,17 +36,6 @@ loadXHR('pyramid.obj')
     rotation: V3(0, 0, 0),
     model: M4()
   }
-  const command = Command.createCommand(gl, {
-    vsrc, 
-    fsrc, 
-    uniforms: {
-      u_color: new Uniforms.U4F([ 0, 1, 0, 1 ]),
-      u_time: new Uniforms.UF(performance.now())
-    },
-    attributes: {
-      a_position: new Attributes.Floats(3, screenQuad)
-    }
-  })
   const drawPyramid = Command.createCommand(gl, {
     vsrc: pvvsrc,
     fsrc: pvfsrc,
@@ -69,8 +50,7 @@ loadXHR('pyramid.obj')
       a_normal: new Attributes.Floats(3, normals)
     }
   })
-  if ( command instanceof Error || drawPyramid instanceof Error ) {
-    console.log(command) 
+  if ( drawPyramid instanceof Error ) {
     console.log(drawPyramid)
   }
   else {
@@ -99,12 +79,6 @@ loadXHR('pyramid.obj')
       gl.clearColor(0, 0, 0, 0)
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-      Command.run(command, { 
-        uniforms: { 
-          u_time: performance.now()
-        },
-        count: 6 
-      })
       Command.run(drawPyramid, {
         uniforms: {
           u_light: light,
