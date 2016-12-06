@@ -11,25 +11,115 @@ const gl = c.getContext('webgl') as WebGLRenderingContext
 /*
   At-a-glance understanding of GLTF
 
-  binary data is stored in <Buffer>
-  1-N <BufferView> refer to slices of a <Buffer> by bytelength ( no type/stride info )
-  1-N <Accessor> adds information to <BufferView> like stride, type, offset, count
-  
-  create single buffer, get bufferViews like Float32Array as slices into this buffer
-      
+  <Buffer> stores binary data
+  <BufferView> refer to slices of a <Buffer> by bytelength ( no type/stride info )
+  <Accessor> adds information to <BufferView> like stride, type, offset, count
+  <Mesh> List of <Primitive> and optional name
+  <Primitive> lists Attributes/Indices? by <Accessor> and Material and drawing mode ( Triangles, etc )
+  <Node> contains <Mesh>[], matrix transform, children <Node>[], and name
 */
+
+enum GLTFComponentType {
+  BYTE = 5120,
+  UNSIGNED_BYTE = 5121,
+  SHORT = 5122,
+  UNSIGNED_SHORT = 5123,
+  FLOAT = 5126
+}
+
+enum GLTFBufferViewTarget { 
+  ARRAY_BUFFER = 34962, 
+  ELEMENT_ARRAY_BUFFER
+}
+
+enum GLTFPrimitiveMode {
+  POINTS = 0,
+  LINES,
+  LINE_LOOP,
+  LINE_STRIP,
+  TRIANGLES,
+  TRIANGLE_STRIP,
+  TRIANGLE_FAN
+}
+
+enum GLTFParameterType {
+  BYTE = 5120,
+  UNSIGNED_BYTE = 5121,
+  SHORT = 5122,
+  UNSIGNED_SHORT = 5123,
+  INT = 5124,
+  UNSIGNED_INT = 5125,
+  FLOAT = 5126,
+  FLOAT_VEC2 = 35664,
+  FLOAT_VEC3 = 35665,
+  FLOAT_VEC4 = 35666,
+  INT_VEC2 = 35667,
+  INT_VEC3 = 35668,
+  INT_VEC4 = 35669,
+  BOOL = 35670,
+  BOOL_VEC2 = 35671,
+  BOOL_VEC3 = 35672,
+  BOOL_VEC4 = 35673,
+  FLOAT_MAT2 = 35674,
+  FLOAT_MAT3 = 35675,
+  FLOAT_MAT4 = 35676,
+  SAMPLER_2D = 35678
+}
+
+interface GLTFAccessor { 
+  bufferView: GLTFBufferView
+  componentType: GLTFComponentType
+  byteStride: number
+  byteOffset: number
+  count: number
+  type: GLTFParameterType
+}
+
+interface GLTFBufferView { 
+  view: ArrayBufferView 
+  target: GLTFBufferViewTarget
+}
+
+interface GLTFMesh {
+  primitives: GLTFPrimitive[]
+  name?: string
+}
+
+interface GLTFPrimitive {
+  attributes: { [ x: string ]: GLTFAccessor }
+  indices?: GLTFAccessor
+  mode: GLTFPrimitiveMode
+  // material: GLTFMaterial
+}
+
+interface GLTFNode {
+  children: GLTFNode[]
+  meshes: GLTFMesh[]
+  name?: string
+}
+
+function containing ( b: ArrayBuffer, offset: number, length: number, value: number[] ): Float32Array {
+  const out = new Float32Array(b, offset, length)
+
+  out.set(value)
+  return out
+}
 
 loadXHR('pyramid.obj')
 .then(parseOBJ)
 .then(geometry => {
   if ( !geometry.success ) return
 
-
-  console.log(geometry.val)
+  // 32b -> 8B
+  const F32_BYTE_SIZE = 4
+  const { vertices, normals } = geometry.val
+  const vertBytelength = vertices.length * F32_BYTE_SIZE
+  const normBytelength = normals.length * F32_BYTE_SIZE
+  const b = new ArrayBuffer(vertBytelength + normBytelength)
+  const verticesBV = containing(b, 0, vertices.length, vertices)
+  const normalsBV = containing(b, vertices.length * F32_BYTE_SIZE, normals.length, normals)
   const keys = new Array(256)
   const light = V3(0, 2, 0)
-  const vertices = new Float32Array(geometry.val.vertices)
-  const normals = new Float32Array(geometry.val.normals)
   const cam = {
     position: new Float32Array([ 0, 1, 5 ]),
     view: M4(),
@@ -57,8 +147,8 @@ loadXHR('pyramid.obj')
       u_projection: new Uniforms.UMatrix4(M4())
     },
     attributes: {
-      a_coord: new Attributes.Floats(3, vertices),
-      a_normal: new Attributes.Floats(3, normals)
+      a_coord: new Attributes.Floats(3, verticesBV),
+      a_normal: new Attributes.Floats(3, normalsBV)
     }
   })
   if ( drawPyramid instanceof Error ) {
@@ -97,7 +187,7 @@ loadXHR('pyramid.obj')
           u_view: cam.view,
           u_projection: cam.projection 
         },
-        count: geometry.val.vertices.length / 3
+        count: vertices.length / 3
       })
       requestAnimationFrame(render)
     }
