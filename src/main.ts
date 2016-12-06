@@ -8,96 +8,6 @@ import { Attributes, Uniforms, Command } from './Commando'
 const c = document.getElementById('target') as HTMLCanvasElement
 const gl = c.getContext('webgl') as WebGLRenderingContext
 
-/*
-  At-a-glance understanding of GLTF
-
-  <Buffer> stores binary data
-  <BufferView> refer to slices of a <Buffer> by bytelength ( no type/stride info )
-  <Accessor> adds information to <BufferView> like stride, type, offset, count
-  <Mesh> List of <Primitive> and optional name
-  <Primitive> lists Attributes/Indices? by <Accessor> and Material and drawing mode ( Triangles, etc )
-  <Node> contains <Mesh>[], matrix transform, children <Node>[], and name
-*/
-
-enum GLTFComponentType {
-  BYTE = 5120,
-  UNSIGNED_BYTE = 5121,
-  SHORT = 5122,
-  UNSIGNED_SHORT = 5123,
-  FLOAT = 5126
-}
-
-enum GLTFBufferViewTarget { 
-  ARRAY_BUFFER = 34962, 
-  ELEMENT_ARRAY_BUFFER
-}
-
-enum GLTFPrimitiveMode {
-  POINTS = 0,
-  LINES,
-  LINE_LOOP,
-  LINE_STRIP,
-  TRIANGLES,
-  TRIANGLE_STRIP,
-  TRIANGLE_FAN
-}
-
-enum GLTFParameterType {
-  BYTE = 5120,
-  UNSIGNED_BYTE = 5121,
-  SHORT = 5122,
-  UNSIGNED_SHORT = 5123,
-  INT = 5124,
-  UNSIGNED_INT = 5125,
-  FLOAT = 5126,
-  FLOAT_VEC2 = 35664,
-  FLOAT_VEC3 = 35665,
-  FLOAT_VEC4 = 35666,
-  INT_VEC2 = 35667,
-  INT_VEC3 = 35668,
-  INT_VEC4 = 35669,
-  BOOL = 35670,
-  BOOL_VEC2 = 35671,
-  BOOL_VEC3 = 35672,
-  BOOL_VEC4 = 35673,
-  FLOAT_MAT2 = 35674,
-  FLOAT_MAT3 = 35675,
-  FLOAT_MAT4 = 35676,
-  SAMPLER_2D = 35678
-}
-
-interface GLTFAccessor { 
-  bufferView: GLTFBufferView
-  componentType: GLTFComponentType
-  byteStride: number
-  byteOffset: number
-  count: number
-  type: GLTFParameterType
-}
-
-interface GLTFBufferView { 
-  view: ArrayBufferView 
-  target: GLTFBufferViewTarget
-}
-
-interface GLTFMesh {
-  primitives: GLTFPrimitive[]
-  name?: string
-}
-
-interface GLTFPrimitive {
-  attributes: { [ x: string ]: GLTFAccessor }
-  indices?: GLTFAccessor
-  mode: GLTFPrimitiveMode
-  // material: GLTFMaterial
-}
-
-interface GLTFNode {
-  children: GLTFNode[]
-  meshes: GLTFMesh[]
-  name?: string
-}
-
 function containing ( b: ArrayBuffer, offset: number, length: number, value: number[] ): Float32Array {
   const out = new Float32Array(b, offset, length)
 
@@ -110,7 +20,6 @@ loadXHR('pyramid.obj')
 .then(geometry => {
   if ( !geometry.success ) return
 
-  // 32b -> 8B
   const F32_BYTE_SIZE = 4
   const { vertices, normals } = geometry.val
   const vertBytelength = vertices.length * F32_BYTE_SIZE
