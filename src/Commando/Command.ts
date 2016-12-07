@@ -100,7 +100,7 @@ function setupAttributes<T> ( gl: GL, program: Program, uattrs: AttributeCfgs<T>
   return out 
 }
 
-function compileShader ( gl: GL, kind: number, src: ShaderSrc ): Shader | Error {
+export function compileShader ( gl: GL, kind: number, src: ShaderSrc ): Shader | Error {
   const shader = gl.createShader(kind)
   const kindStr = kind === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT'
 
@@ -111,7 +111,7 @@ function compileShader ( gl: GL, kind: number, src: ShaderSrc ): Shader | Error 
     : new Error(`${ kindStr }: ${ gl.getShaderInfoLog(shader) || '' }`)
 }
 
-function fromSource ( gl: GL, vsrc: ShaderSrc, fsrc: ShaderSrc ): Program | Error {
+export function fromSource ( gl: GL, vsrc: ShaderSrc, fsrc: ShaderSrc ): Program | Error {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, vsrc)
   const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fsrc)
   const program = gl.createProgram()
