@@ -76,7 +76,7 @@ async function main ( gl: WebGLRenderingContext ) {
     gl.enableVertexAttribArray(a_loc.a_position)
     gl.vertexAttribPointer(a_loc.a_position, 3, gl.FLOAT, false, 0, a_position.byteOffset)
     gl.enableVertexAttribArray(a_loc.a_color)
-    gl.vertexAttribPointer(a_loc.a_color, 4, gl.FLOAT, false, 0, a_position.byteLength)
+    gl.vertexAttribPointer(a_loc.a_color, 4, gl.FLOAT, false, 0, a_color.byteOffset)
 
     gl.drawArrays(gl.TRIANGLES, 0, count)
 
