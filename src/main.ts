@@ -86,12 +86,10 @@ async function main ( gl: WebGLRenderingContext ) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.useProgram(p)
 
-    // uniforms
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, textureDiffuse)
     gl.uniform1i(u_loc.u_diffuse, 0) // this 0 is the texture register for gl.TEXTURE0
     gl.uniform1f(u_loc.u_time, performance.now())
-
 
     gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer)
     gl.enableVertexAttribArray(a_loc.a_position)
