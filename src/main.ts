@@ -2,6 +2,7 @@ import { loadString, loadBinary, loadImage } from './Load'
 import { parseOBJ } from './Parsers/OBJ'
 import { V3, M4, identity, translate, rotateX, rotateY, rotateZ, scale, lookAt, perspective } from './Matrix'
 import { Attributes, Uniforms, Command } from './Commando'
+import * as GLTF from './GLTF'
 
 const F32_BYTE_SIZE = 4
 

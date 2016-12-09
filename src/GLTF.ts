@@ -1,19 +1,6 @@
-/*
-  At-a-glance understanding of GLTF
-
-  <Buffer> stores binary data
-  <BufferView> refer to slices of a <Buffer> by bytelength ( no type/stride info )
-  <Accessor> adds information to <BufferView> like stride, type, offset, count
-  <Mesh> List of <Primitive> and optional name
-  <Primitive> lists Attributes/Indices? by <Accessor> and Material and drawing mode ( Triangles, etc )
-  <Node> contains <Mesh>[], matrix transform, children <Node>[], and name
-  // TODO: <Material> <Technique> <Camera> <Animation> <Program> <Scene>
-*/
-
 type Block<T> = { [ x: string ]: T }
 
-// Type of attributeArray
-enum GLTFComponentType {
+export enum ComponentType {
   BYTE = 5120,
   UNSIGNED_BYTE = 5121,
   SHORT = 5122,
@@ -21,14 +8,12 @@ enum GLTFComponentType {
   FLOAT = 5126
 }
 
-// Type of Buffer ( attr vs index essentially )
-enum GLTFBufferViewTarget { 
+export enum BufferViewTarget { 
   ARRAY_BUFFER = 34962, 
   ELEMENT_ARRAY_BUFFER
 }
 
-// Draw modes
-enum GLTFPrimitiveMode {
+export enum PrimitiveMode {
   POINTS = 0,
   LINES,
   LINE_LOOP,
@@ -38,8 +23,7 @@ enum GLTFPrimitiveMode {
   TRIANGLE_FAN
 }
 
-// The type of an attribute ( accessor )
-enum GLTFParameterType {
+export enum ParameterType {
   BYTE = 5120,
   UNSIGNED_BYTE = 5121,
   SHORT = 5122,
@@ -63,72 +47,85 @@ enum GLTFParameterType {
   SAMPLER_2D = 35678
 }
 
-// An attribute.  Parameterize bufferView with stride, offset, count, and type
-interface GLTFAccessor { 
-  bufferView: GLTFBufferView
-  componentType: GLTFComponentType
-  byteStride: number
+export interface BufferView { 
+  buffer: ArrayBuffer
+  byteLength: number
   byteOffset: number
+  target?: BufferViewTarget
+}
+
+export interface Accessor { 
+  bufferView: BufferView
+  byteOffset: number
+  byteStride?: number
+  componentType: ComponentType
   count: number
-  type: GLTFParameterType
+  type: ParameterType
 }
 
-// Chunk of buffer of given byteLength/byteOffset
-interface GLTFBufferView { 
-  view: ArrayBufferView 
-  target: GLTFBufferViewTarget
+/*
+  Quick summary of Program/Technique/Material relationship:
+
+  Techniques are essentially "Commands" that wrap a WebGLProgram
+  with semantic and custom information about what uniforms
+  and attributes are needed to invoke this command.  The
+  technique can provide the base values for uniforms.  
+
+  Materials are wrappers around a technique which can override
+  the values for uniforms.
+*/
+
+export interface Technique {
+  program: WebGLProgram
+  parameters?:
+  attributes?:
+  uniforms?:
 }
 
-// Collection of primitives ( draw-calls, roughly )
-interface GLTFMesh {
-  primitives: GLTFPrimitive[]
+export interface Mesh {
+  primitives: Primitive[]
   name: string
 }
 
-// A "draw-call" roughly. attributes/indices?, material and draw-mode
-interface GLTFPrimitive {
-  attributes: Block<GLTFAccessor>
-  indices?: GLTFAccessor
-  mode: GLTFPrimitiveMode
-  // material: GLTFMaterial
+export interface Primitive {
+  attributes: Block<Accessor>
+  indices?: Accessor
+  mode: PrimitiveMode
+  // material: Material
 }
 
-// Instance of mesh in the scene w/ transform, children, and name
-interface GLTFNode {
+// TODO: matrix is actually one of two possible options for transform
+// can also be any of translation/scale/rotation all of which have Identity defaults
+export interface SceneNode {
   matrix: Float32Array
-  children: GLTFNode[]
-  meshes: GLTFMesh[]
+  children: SceneNode[]
+  meshes: Mesh[]
   name: string
 }
 
-// (meta)-data for webgl program
-interface GLTFProgram {
+export interface Program {
   attributes: string[]
   fragmentShader: string
   vertexShader: string
 }
 
-// root object
-interface GLTFAsset<A, E> {
-  accessors: Block<GLTFAccessor>
-  // animations: Block<GLTFAnimation>
-  // asset: A // optional meta-data
-  buffers: Block<GLTFBuffer> 
-  bufferViews: Block<GLTFBufferView>
-  // cameras: Block<GLTFCamera>
-  // images: Block<GLTFImage>
-  // materials: Block<GLTFMaterial>
-  meshes: Block<GLTFMesh>
-  nodes: Block<GLTFNode>
-  programs: Block<GLTFProgram>
-  // samplers: Block<GLTFSampler>
-  // scene?: GLTFScene // optional scene
-  // scenes: Block<GLTFScene>
-  // shaders: Block<GLTFShader>
-  // skins: Block<GLTFSkin>
-  // techniques: Block<GLTFTechnique>
-  // textures: Block<GLTFTexture>
+export interface GLTF<A, E> {
+  accessors: Block<Accessor>
+  // animations: Block<Animation>
+  buffers: Block<ArrayBuffer> 
+  bufferViews: Block<BufferView>
+  // cameras: Block<Camera>
+  // images: Block<Image>
+  // materials: Block<Material>
+  meshes: Block<Mesh>
+  nodes: Block<SceneNode>
+  programs: Block<Program>
+  // samplers: Block<Sampler>
+  // scene?: Scene // optional scene
+  // scenes: Block<Scene>
+  // shaders: Block<Shader>
+  // skins: Block<Skin>
+  // techniques: Block<Technique>
+  // textures: Block<Texture>
   // extensionsUsed: string[]
-  // extensions?: Block<string> // extension-specific objects
-  // extras?: E // optional app-specific data
 }
